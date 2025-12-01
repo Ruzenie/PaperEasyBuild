@@ -1,0 +1,27 @@
+# Node / pnpm
+node_modules/
+pnpm-debug.log*
+npm-debug.log*
+yarn.lock
+
+# Build output
+dist/
+dist-*/
+out/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Env / local config
+.env
+.env.*.local
+*.local
+

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": ["src/renderer/*"],
+      "@main/*": ["src/main/*"]
+    },
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src"]
+}
+
