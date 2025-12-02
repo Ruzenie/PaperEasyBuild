@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 type QuestionType = "singleChoice" | "multiChoice" | "shortText";
 
@@ -28,9 +29,10 @@ const mockQuestions: QuestionDefinition[] = [
   }
 ];
 
-const App: React.FC = () => {
+const BuilderPage: React.FC = () => {
   // 这里先用静态数据，后面可以替换成拖拽生成的 schema
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>("q1");
+  const navigate = useNavigate();
 
   const selectedQuestion = mockQuestions.find((q) => q.id === selectedQuestionId) ?? null;
 
@@ -42,7 +44,9 @@ const App: React.FC = () => {
           <span>PaperEasy 问卷低代码平台</span>
         </div>
         <div className="app-header-actions">
-          <button className="btn btn-ghost">预览</button>
+          <button className="btn btn-ghost" onClick={() => navigate("/preview")}>
+            预览
+          </button>
           <button className="btn btn-primary">发布问卷</button>
         </div>
       </header>
@@ -141,5 +145,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
-
+export default BuilderPage;
