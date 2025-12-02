@@ -1,16 +1,32 @@
-import { contextBridge } from "electron";
+import { contextBridge, shell } from "electron";
 
-// Expose a very small, safe API to the renderer.
-// 后续可以在这里增加与主进程通信、文件读写等能力。
-contextBridge.exposeInMainWorld("paperEasyAPI", {
-  ping: () => "pong"
-});
+// 定义暴露给渲染进程的安全 API
+type PaperEasyAPI = {
+  ping: () => string;
+  shell: {
+    openExternal: (url: string) => void;
+  };
+};
+
+const api: PaperEasyAPI = {
+  ping: () => "pong",
+  shell: {
+    openExternal: (url: string) => {
+      // 调用 Electron 的 shell.openExternal 打开外部链接
+      void shell.openExternal(url);
+    }
+  }
+};
+
+// 兼容两种访问方式：
+// - window.paperEasyAPI
+// - window.electron
+contextBridge.exposeInMainWorld("paperEasyAPI", api);
+contextBridge.exposeInMainWorld("electron", api);
 
 declare global {
   interface Window {
-    paperEasyAPI: {
-      ping: () => string;
-    };
+    paperEasyAPI: PaperEasyAPI;
+    electron: PaperEasyAPI;
   }
 }
-

@@ -3,6 +3,7 @@ import { createHashRouter, Navigate, Outlet } from "react-router-dom";
 import BuilderPage from "../pages/Builder";
 import PreviewPage from "../pages/Preview";
 import Home  from "../pages/Home";
+import ComponentMarket from "../pages/ComponentMarket";
 
 const RootLayout: React.FC = () => {
   return <Outlet />;
@@ -24,6 +25,10 @@ export const router = createHashRouter([
       {
         path: "preview",
         element: <PreviewPage />
+      },
+      {
+        path:"Market",
+        element:<ComponentMarket />
       },
       {
         path: "*",

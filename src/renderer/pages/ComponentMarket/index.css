@@ -1,0 +1,45 @@
+.market-panel {
+  position: relative;
+  /* 允许便签超出左侧边栏时仍可见 */
+  overflow: visible;
+}
+
+.market-category-strip {
+  position: absolute;
+  left: -70px; /* 略微突出在左栏之外，且不会被裁剪 */
+  top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.market-category-tag {
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  min-width: 64px;
+  border-radius: 0 999px 999px 0; /* 右侧圆角，像贴在侧边的标签 */
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+  background: #fffbeb;
+  color: #92400e;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.market-category-tag:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+}
+
+.market-category-tag--active {
+  background: #fef3c7;
+  color: #b45309;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.market-category-tag-label {
+  white-space: nowrap;
+}

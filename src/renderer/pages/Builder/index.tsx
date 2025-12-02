@@ -1,14 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-
-type QuestionType = "singleChoice" | "multiChoice" | "shortText";
-
-interface QuestionDefinition {
-  id: string;
-  title: string;
-  type: QuestionType;
-  required?: boolean;
-}
+import type { QuestionDefinition, QuestionType } from "@renderer/type/Builder";
 
 const mockQuestions: QuestionDefinition[] = [
   {
@@ -122,7 +114,9 @@ const BuilderPage: React.FC = () => {
               </div>
 
               <div className="property-group">
-                <label style={{ fontSize: "0.8rem", display: "flex", gap: 4, alignItems: "center" }}>
+                <label
+                  style={{ fontSize: "0.8rem", display: "flex", gap: 4, alignItems: "center" }}
+                >
                   <input type="checkbox" checked={!!selectedQuestion.required} readOnly /> 必填
                 </label>
               </div>

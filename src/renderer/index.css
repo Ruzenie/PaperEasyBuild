@@ -76,6 +76,15 @@ body {
   min-height: 0;
 }
 
+/* Component Market: slightly narrower left sidebar so sticky tags stand out more,
+   and shift the whole grid to the right to leave room for the sticky labels */
+.market-body {
+  display: flex;
+  grid-template-columns: 200px minmax(0, 1fr) 280px;
+  padding-left: 48px;
+  box-sizing: border-box;
+}
+
 .panel {
   border-right: 1px solid #e5e7eb;
   padding: 0.75rem;
@@ -169,4 +178,3 @@ body {
   border: 1px solid #d1d5db;
   font-size: 0.8rem;
 }
-
