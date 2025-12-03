@@ -12,21 +12,35 @@ const mockQuestions: QuestionDefinition[] = [
     id: "q2",
     title: "您最常使用问卷的场景？",
     type: "singleChoice",
-    required: true
+    required: true,
+    options: ["活动报名", "满意度调查", "产品调研"]
   },
   {
     id: "q3",
     title: "您关注的功能（可多选）",
-    type: "multiChoice"
+    type: "multiChoice",
+    options: ["拖拽编辑", "问卷模板", "数据可视化"]
   }
 ];
 
 const BuilderPage: React.FC = () => {
-  // 这里先用静态数据，后面可以替换成拖拽生成的 schema
-  const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>("q1");
+  // 这里先用本地 state，后面可以替换成拖拽生成 / 持久化的 schema
+  const [questions, setQuestions] = React.useState<QuestionDefinition[]>(mockQuestions);
+  const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>(
+    mockQuestions[0]?.id ?? null
+  );
+  // 问卷级标题 / 描述，直接在画布顶部编辑
+  const [formTitle, setFormTitle] = React.useState<string>("新建问卷");
+  const [formDescription, setFormDescription] = React.useState<string>(
+    "在左侧拖入题目，在右侧配置属性。"
+  );
   const navigate = useNavigate();
 
-  const selectedQuestion = mockQuestions.find((q) => q.id === selectedQuestionId) ?? null;
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId) ?? null;
+
+  const updateQuestion = (id: string, patch: Partial<QuestionDefinition>) => {
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  };
 
   return (
     <div className="app-root">
@@ -59,10 +73,36 @@ const BuilderPage: React.FC = () => {
         {/* 中间问卷画布 */}
         <main className="canvas-wrapper">
           <section className="canvas">
-            <h1 className="canvas-title">新建问卷</h1>
-            <p className="canvas-desc">在左侧拖入题目，在右侧配置属性。</p>
+            {/* 画布标题可直接编辑 */}
+            <input
+              className="canvas-title"
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              style={{
+                width: "100%",
+                border: "none",
+                outline: "none",
+                padding: 0,
+                background: "transparent"
+              }}
+            />
+            {/* 画布描述可直接编辑 */}
+            <textarea
+              className="canvas-desc"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              rows={2}
+              style={{
+                width: "100%",
+                border: "none",
+                outline: "none",
+                padding: 0,
+                resize: "none",
+                background: "transparent"
+              }}
+            />
 
-            {mockQuestions.map((question) => (
+            {questions.map((question) => (
               <article
                 key={question.id}
                 className="question-item"
@@ -76,13 +116,146 @@ const BuilderPage: React.FC = () => {
               >
                 <div className="question-label">
                   {question.required && <span style={{ color: "#ef4444", marginRight: 4 }}>*</span>}
-                  {question.title}
+                  {/* 在画布中直接编辑题目文字 */}
+                  {question.id === selectedQuestionId ? (
+                    <input
+                      value={question.title}
+                      onChange={(e) =>
+                        updateQuestion(question.id, {
+                          title: e.target.value
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        border: "none",
+                        outline: "none",
+                        padding: 0,
+                        background: "transparent",
+                        fontSize: "0.9rem"
+                      }}
+                    />
+                  ) : (
+                    question.title
+                  )}
                 </div>
                 <div className="question-meta">
-                  {question.type === "singleChoice" && "单选题 · 示例选项 A / B / C"}
-                  {question.type === "multiChoice" && "多选题 · 示例选项 A / B / C"}
+                  {/* 在画布上直接切换题目类型 */}
+                  <select
+                    style={{ marginRight: 8 }}
+                    value={question.type}
+                    onChange={(e) => {
+                      const nextType = e.target.value as QuestionType;
+                      const isChoice =
+                        nextType === "singleChoice" || nextType === "multiChoice";
+                      updateQuestion(question.id, {
+                        type: nextType,
+                        options:
+                          isChoice && (!question.options || question.options.length === 0)
+                            ? ["选项一", "选项二", "选项三"]
+                            : isChoice
+                            ? question.options
+                            : undefined
+                      });
+                    }}
+                  >
+                    <option value="singleChoice">单选题</option>
+                    <option value="multiChoice">多选题</option>
+                    <option value="shortText">简答题</option>
+                  </select>
+                  {question.type === "singleChoice" && "单选题"}
+                  {question.type === "multiChoice" && "多选题"}
                   {question.type === "shortText" && "简答题 · 示例输入框"}
                 </div>
+                {(question.type === "singleChoice" || question.type === "multiChoice") && (
+                  <div style={{ marginTop: 6, paddingLeft: 4 }}>
+                    {(question.options && question.options.length > 0
+                      ? question.options
+                      : ["选项一", "选项二"]
+                    ).map((opt, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          marginTop: index === 0 ? 0 : 4
+                        }}
+                      >
+                        <input
+                          type={question.type === "singleChoice" ? "radio" : "checkbox"}
+                          disabled
+                        />
+                        <input
+                          value={opt}
+                          onChange={(e) => {
+                            const nextOptions =
+                              question.options && question.options.length > 0
+                                ? [...question.options]
+                                : ["选项一", "选项二"];
+                            nextOptions[index] = e.target.value;
+                            updateQuestion(question.id, { options: nextOptions });
+                          }}
+                          style={{
+                            flex: 1,
+                            border: "none",
+                            outline: "none",
+                            padding: 0,
+                            background: "transparent",
+                            fontSize: "0.8rem"
+                          }}
+                        />
+                        <button
+                          type="button"
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#ef4444",
+                            border: "none",
+                            background: "transparent",
+                            cursor: "pointer"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const source =
+                              question.options && question.options.length > 0
+                                ? question.options
+                                : ["选项一", "选项二"];
+                            if (source.length <= 2) return;
+                            const nextOptions = source.filter((_, i) => i !== index);
+                            updateQuestion(question.id, { options: nextOptions });
+                          }}
+                          disabled={
+                            (question.options && question.options.length <= 2) ||
+                            !question.options
+                          }
+                        >
+                          删除
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 4,
+                        fontSize: "0.75rem",
+                        color: "#2563eb",
+                        border: "none",
+                        background: "transparent",
+                        cursor: "pointer"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const base =
+                          question.options && question.options.length > 0
+                            ? question.options
+                            : ["选项一", "选项二"];
+                        const nextOptions = [...base, `选项${base.length + 1}`];
+                        updateQuestion(question.id, { options: nextOptions });
+                      }}
+                    >
+                      + 新增选项
+                    </button>
+                  </div>
+                )}
               </article>
             ))}
           </section>
@@ -99,14 +272,34 @@ const BuilderPage: React.FC = () => {
                 <input
                   className="property-input"
                   value={selectedQuestion.title}
-                  readOnly
-                  // 后续可改为 onChange => 更新 schema
+                  onChange={(e) =>
+                    updateQuestion(selectedQuestion.id, {
+                      title: e.target.value
+                    })
+                  }
                 />
               </div>
 
               <div className="property-group">
                 <div className="property-label">题目类型</div>
-                <select className="property-select" value={selectedQuestion.type} disabled>
+                <select
+                  className="property-select"
+                  value={selectedQuestion.type}
+                  onChange={(e) => {
+                    const nextType = e.target.value as QuestionType;
+                    const isChoice = nextType === "singleChoice" || nextType === "multiChoice";
+                    updateQuestion(selectedQuestion.id, {
+                      type: nextType,
+                      options:
+                        isChoice &&
+                        (!selectedQuestion.options || selectedQuestion.options.length === 0)
+                          ? ["选项一", "选项二", "选项三"]
+                          : isChoice
+                          ? selectedQuestion.options
+                          : undefined
+                    });
+                  }}
+                >
                   <option value="singleChoice">单选题</option>
                   <option value="multiChoice">多选题</option>
                   <option value="shortText">简答题</option>
@@ -117,7 +310,16 @@ const BuilderPage: React.FC = () => {
                 <label
                   style={{ fontSize: "0.8rem", display: "flex", gap: 4, alignItems: "center" }}
                 >
-                  <input type="checkbox" checked={!!selectedQuestion.required} readOnly /> 必填
+                  <input
+                    type="checkbox"
+                    checked={!!selectedQuestion.required}
+                    onChange={(e) =>
+                      updateQuestion(selectedQuestion.id, {
+                        required: e.target.checked
+                      })
+                    }
+                  />{" "}
+                  必填
                 </label>
               </div>
 

@@ -4,55 +4,90 @@ import type { QuestionTemplate, TemplateConfig } from "@renderer/type/ComponentM
 interface PreviewPanelProps {
   template: QuestionTemplate;
   config: TemplateConfig;
+  // 允许在画布中直接编辑标题 / 描述 / 选项
+  onConfigChange: (patch: Partial<TemplateConfig>) => void;
 }
 
-const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config }) => {
+const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config, onConfigChange }) => {
   const options = config.options;
+
+  const handleOptionChange = (index: number, nextValue: string) => {
+    const next = [...options];
+    next[index] = nextValue;
+    onConfigChange({ options: next });
+  };
 
   return (
     <section className="canvas">
-      <h1
-        className="canvas-title"
-        style={{
-          textAlign: config.titleStyle.align,
-          fontSize: config.titleStyle.fontSize,
-          color: config.titleStyle.color,
-          fontWeight: config.titleStyle.bold ? 600 : 400,
-          fontStyle: config.titleStyle.italic ? "italic" : "normal"
-        }}
-      >
-        {config.title}
-      </h1>
-      {config.description && (
-        <p
+      {/* 标题：在画布中直接编辑 */}
+      <div className="canvas-field-editable">
+        <input
+          className="canvas-title"
+          value={config.title}
+          onChange={(e) => onConfigChange({ title: e.target.value })}
+          style={{
+            textAlign: config.titleStyle.align,
+            fontSize: config.titleStyle.fontSize,
+            color: config.titleStyle.color,
+            fontWeight: config.titleStyle.bold ? 600 : 400,
+            fontStyle: config.titleStyle.italic ? "italic" : "normal",
+            width: "100%",
+            border: "none",
+            outline: "none",
+            padding: 0,
+            background: "transparent"
+          }}
+        />
+      </div>
+
+      {/* 描述：在画布中直接编辑 */}
+      <div className="canvas-field-editable">
+        <textarea
           className="canvas-desc"
+          value={config.description}
+          onChange={(e) => onConfigChange({ description: e.target.value })}
+          placeholder="请输入描述（可选）"
+          rows={2}
           style={{
             textAlign: config.descriptionStyle.align,
             fontSize: config.descriptionStyle.fontSize,
             color: config.descriptionStyle.color,
             fontWeight: config.descriptionStyle.bold ? 500 : 400,
-            fontStyle: config.descriptionStyle.italic ? "italic" : "normal"
+            fontStyle: config.descriptionStyle.italic ? "italic" : "normal",
+            width: "100%",
+            border: "none",
+            outline: "none",
+            padding: 0,
+            resize: "none",
+            background: "transparent"
           }}
-        >
-          {config.description}
-        </p>
-      )}
+        />
+      </div>
 
-      {template.type === "singleChoice" && (
+      {(template.type === "singleChoice" || template.type === "judge") && (
         <div>
-          {options.map((opt) => (
-            <div key={opt} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {options.map((opt, index) => (
+            <div
+              key={index}
+              className="option-row-editable"
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
               <input type="radio" disabled />
-              <span
+              <input
+                value={opt}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
                 style={{
+                  flex: 1,
+                  border: "none",
+                  outline: "none",
+                  padding: 0,
+                  background: "transparent",
                   fontSize: config.optionStyle.fontSize,
                   color: config.optionStyle.color,
                   fontWeight: config.optionStyle.bold ? 500 : 400,
                   fontStyle: config.optionStyle.italic ? "italic" : "normal"
                 }}
-              >
-                {opt}
-              </span>
+              />
             </div>
           ))}
         </div>
@@ -60,19 +95,28 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config }) => {
 
       {template.type === "multiChoice" && (
         <div>
-          {options.map((opt) => (
-            <div key={opt} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {options.map((opt, index) => (
+            <div
+              key={index}
+              className="option-row-editable"
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
               <input type="checkbox" disabled />
-              <span
+              <input
+                value={opt}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
                 style={{
+                  flex: 1,
+                  border: "none",
+                  outline: "none",
+                  padding: 0,
+                  background: "transparent",
                   fontSize: config.optionStyle.fontSize,
                   color: config.optionStyle.color,
                   fontWeight: config.optionStyle.bold ? 500 : 400,
                   fontStyle: config.optionStyle.italic ? "italic" : "normal"
                 }}
-              >
-                {opt}
-              </span>
+              />
             </div>
           ))}
         </div>
@@ -80,23 +124,37 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config }) => {
 
       {template.type === "rating" && (
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          {options.map((opt) => (
-            <button
-              key={opt}
+          {options.map((opt, index) => (
+            <div
+              key={index}
+              className="option-row-editable"
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 999,
                 border: "1px solid #d1d5db",
                 background: "#fff",
-                fontSize: config.optionStyle.fontSize,
-                color: config.optionStyle.color,
-                fontWeight: config.optionStyle.bold ? 500 : 400,
-                fontStyle: config.optionStyle.italic ? "italic" : "normal"
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
               }}
             >
-              {opt}
-            </button>
+              <input
+                value={opt}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  textAlign: "center",
+                  background: "transparent",
+                  fontSize: config.optionStyle.fontSize,
+                  color: config.optionStyle.color,
+                  fontWeight: config.optionStyle.bold ? 500 : 400,
+                  fontStyle: config.optionStyle.italic ? "italic" : "normal"
+                }}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -114,11 +172,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config }) => {
         />
       )}
 
-      {template.type === "shortText" && (
+      {(template.type === "shortText" || template.type === "fillBlank") && (
         <input
           type="text"
           disabled
-          placeholder="单行文本输入"
+          placeholder={template.type === "fillBlank" ? "在此填写答案" : "单行文本输入"}
           style={{
             width: "100%",
             padding: "0.35rem 0.45rem",
@@ -179,4 +237,3 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config }) => {
 };
 
 export default PreviewPanel;
-

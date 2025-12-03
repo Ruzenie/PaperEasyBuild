@@ -4,6 +4,20 @@
   overflow: visible;
 }
 
+/* Component Market: slightly narrower left sidebar so sticky tags stand out more,
+   and shift the whole grid to the right to leave room for the sticky labels */
+.market-body {
+  display: flex;
+  grid-template-columns: 200px minmax(0, 1fr) 280px;
+  padding-left: 48px;
+  box-sizing: border-box;
+}
+
+.market-body .panel-right::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .market-category-strip {
   position: absolute;
   left: -70px; /* 略微突出在左栏之外，且不会被裁剪 */
@@ -42,4 +56,43 @@
 
 .market-category-tag-label {
   white-space: nowrap;
+}
+
+/* 组件市场：选项行编辑高亮 */
+.option-row-editable {
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.option-row-editable:hover {
+  background-color: #f9fafb;
+}
+
+.option-row-editable:focus-within {
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+}
+
+/* 组件市场：标题 / 描述编辑高亮 */
+.canvas-field-editable {
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.canvas-field-editable:hover {
+  background-color: #f9fafb;
+}
+
+.canvas-field-editable:focus-within {
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.6);
+}
+
+/* 避免 margin 把高亮区域撑开，统一由外层控制间距 */
+.canvas-field-editable .canvas-title,
+.canvas-field-editable .canvas-desc {
+  margin-bottom: 0;
 }

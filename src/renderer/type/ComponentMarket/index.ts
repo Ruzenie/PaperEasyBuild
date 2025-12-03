@@ -23,7 +23,10 @@ export type QuestionTemplateType =
   | "shortText"
   | "longText"
   | "name"
-  | "phone";
+  | "phone"
+  // exam-style types
+  | "judge" // 判断题（对/错）
+  | "fillBlank"; // 填空题
 
 export interface QuestionTemplate {
   id: string;
@@ -43,4 +46,3 @@ export interface TemplateConfig {
   descriptionStyle: TextStyleConfig;
   optionStyle: TextStyleConfig;
 }
-

@@ -1,6 +1,10 @@
 import React from "react";
-import { Layout, Button, Input, InputNumber } from "antd";
-import type { QuestionTemplate, TemplateConfig, TextStyleConfig } from "@renderer/type/ComponentMarket";
+import { Layout, Button, Input, InputNumber, Radio } from "antd";
+import type {
+  QuestionTemplate,
+  TemplateConfig,
+  TextStyleConfig
+} from "@renderer/type/ComponentMarket";
 
 const { Sider } = Layout;
 
@@ -19,22 +23,15 @@ const renderTextStyleControls = (
     <div className="property-label">{label}</div>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
       <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>对齐</span>
-      <Button.Group>
-        <Button
-          size="small"
-          type={style.align === "left" ? "primary" : "default"}
-          onClick={() => onStyleChange({ align: "left" })}
-        >
-          左
-        </Button>
-        <Button
-          size="small"
-          type={style.align === "center" ? "primary" : "default"}
-          onClick={() => onStyleChange({ align: "center" })}
-        >
-          中
-        </Button>
-      </Button.Group>
+      <Radio.Group
+        size="small"
+        value={style.align}
+        onChange={(e) => onStyleChange({ align: e.target.value })}
+        optionType="button"
+      >
+        <Radio.Button value="left">左</Radio.Button>
+        <Radio.Button value="center">中</Radio.Button>
+      </Radio.Group>
       <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>字号</span>
       <InputNumber
         size="small"
@@ -117,7 +114,8 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({ template, config, onConfigCha
 
       {(template.type === "singleChoice" ||
         template.type === "multiChoice" ||
-        template.type === "rating") && (
+        template.type === "rating" ||
+        template.type === "judge") && (
         <div className="property-group">
           <div className="property-label">题目选项（至少 2 个）</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -180,4 +178,3 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({ template, config, onConfigCha
 };
 
 export default ConfigSider;
-
