@@ -1,12 +1,5 @@
 import React from "react";
-import type { QuestionTemplate, TemplateConfig } from "@renderer/type/ComponentMarket";
-
-interface PreviewPanelProps {
-  template: QuestionTemplate;
-  config: TemplateConfig;
-  // 允许在画布中直接编辑标题 / 描述 / 选项
-  onConfigChange: (patch: Partial<TemplateConfig>) => void;
-}
+import type { PreviewPanelProps } from "@renderer/type/ComponentMarket";
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config, onConfigChange }) => {
   const options = config.options;
@@ -156,6 +149,41 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config, onConfigC
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {template.type === "slider" && (
+        <div style={{ marginTop: 8 }}>
+          <input
+            type="range"
+            min={0}
+            max={Math.max(options.length - 1, 1)}
+            disabled
+            style={{ width: "100%" }}
+          />
+          {options.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 4
+              }}
+            >
+              {options.map((opt, index) => (
+                <span
+                  key={index}
+                  style={{
+                    fontSize: config.optionStyle.fontSize - 1,
+                    color: config.optionStyle.color,
+                    fontWeight: config.optionStyle.bold ? 500 : 400,
+                    fontStyle: config.optionStyle.italic ? "italic" : "normal"
+                  }}
+                >
+                  {opt}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

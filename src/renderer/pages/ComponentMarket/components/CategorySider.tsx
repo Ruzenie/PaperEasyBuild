@@ -1,17 +1,8 @@
 import React from "react";
 import { Layout } from "antd";
-import type { QuestionCategory, QuestionCategoryId, QuestionTemplate } from "@renderer/type/ComponentMarket";
+import type { CategorySiderProps } from "@renderer/type/ComponentMarket";
 
 const { Sider } = Layout;
-
-interface CategorySiderProps {
-  categories: QuestionCategory[];
-  activeCategoryId: QuestionCategoryId;
-  onCategoryChange: (id: QuestionCategoryId) => void;
-  templates: QuestionTemplate[];
-  activeTemplateId: string;
-  onTemplateChange: (templateId: string) => void;
-}
 
 const CategorySider: React.FC<CategorySiderProps> = ({
   categories,
@@ -48,12 +39,9 @@ const CategorySider: React.FC<CategorySiderProps> = ({
         {visibleTemplates.map((tpl) => (
           <div
             key={tpl.id}
-            className="component-item"
-            style={{
-              cursor: "pointer",
-              borderColor: tpl.id === activeTemplateId ? "#2563eb" : "rgba(209,213,219,1)",
-              background: tpl.id === activeTemplateId ? "rgba(239,246,255,1)" : "#fff"
-            }}
+            className={
+              "component-item" + (tpl.id === activeTemplateId ? " component-item--active" : "")
+            }
             onClick={() => onTemplateChange(tpl.id)}
           >
             {tpl.name}
@@ -65,4 +53,3 @@ const CategorySider: React.FC<CategorySiderProps> = ({
 };
 
 export default CategorySider;
-

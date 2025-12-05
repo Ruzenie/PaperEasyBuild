@@ -1,7 +1,7 @@
 import React from "react";
 import { Layout, Button } from "antd";
 import { useNavigate } from "react-router-dom";
-import { LeftOutlined, PlusOutlined } from "@ant-design/icons";
+import { LeftOutlined, PlusOutlined, CopyOutlined } from "@ant-design/icons";
 import PaperHeader from "../../component/PaperHeader";
 import PaperFooter from "../../component/PaperFooter";
 import type {
@@ -26,7 +26,15 @@ const CATEGORIES: QuestionCategory[] = [
   { id: "contact", name: "联系方式" }
 ];
 
-const TEMPLATES: QuestionTemplate[] = [
+const BASE_TEMPLATES: QuestionTemplate[] = [
+  {
+    id: "note-basic",
+    categoryId: "note",
+    type: "note",
+    name: "备注说明",
+    defaultTitle: "这是一个备注说明",
+    defaultDescription: "用于向用户提供额外的信息或说明。"
+  },
   {
     id: "singleChoice-basic",
     categoryId: "choice",
@@ -54,24 +62,14 @@ const TEMPLATES: QuestionTemplate[] = [
     defaultDescription: "1 分非常不满意，5 分非常满意。",
     defaultOptions: ["1", "2", "3", "4", "5"]
   },
-  // 考试场景：选择题
   {
-    id: "exam-singleChoice",
-    categoryId: "choice",
-    type: "singleChoice",
-    name: "单选题（考试）",
-    defaultTitle: "【单选题】题干示例",
-    defaultDescription: "请选择一个最符合题意的选项。",
-    defaultOptions: ["A. 选项一", "B. 选项二", "C. 选项三", "D. 选项四"]
-  },
-  {
-    id: "exam-multiChoice",
-    categoryId: "choice",
-    type: "multiChoice",
-    name: "多选题（考试）",
-    defaultTitle: "【多选题】题干示例",
-    defaultDescription: "可选择一个或多个选项。",
-    defaultOptions: ["A. 选项一", "B. 选项二", "C. 选项三", "D. 选项四"]
+    id: "slider-basic",
+    categoryId: "advanced",
+    type: "slider",
+    name: "滑块题",
+    defaultTitle: "通过滑块选择数值",
+    defaultDescription: "例如：在 0 到 100 之间选择一个分值。",
+    defaultOptions: ["0", "25", "50", "75", "100"]
   },
   {
     id: "exam-judge",
@@ -141,9 +139,9 @@ const TEMPLATES: QuestionTemplate[] = [
   }
 ];
 
-const buildInitialConfig = (): Record<string, TemplateConfig> => {
+const buildInitialConfig = (templates: QuestionTemplate[]): Record<string, TemplateConfig> => {
   const result: Record<string, TemplateConfig> = {};
-  for (const t of TEMPLATES) {
+  for (const t of templates) {
     const baseOptions =
       t.defaultOptions && t.defaultOptions.length >= 2 ? t.defaultOptions : ["选项一", "选项二"];
 
@@ -180,19 +178,20 @@ const buildInitialConfig = (): Record<string, TemplateConfig> => {
 const ComponentMarket: React.FC = () => {
   const navigate = useNavigate();
 
+  const [templates, setTemplates] = React.useState<QuestionTemplate[]>(BASE_TEMPLATES);
   const [activeCategoryId, setActiveCategoryId] = React.useState<QuestionCategoryId>("choice");
   const [activeTemplateId, setActiveTemplateId] = React.useState<string>("singleChoice-basic");
   const [configById, setConfigById] = React.useState<Record<string, TemplateConfig>>(() =>
-    buildInitialConfig()
+    buildInitialConfig(BASE_TEMPLATES)
   );
 
   const activeTemplates = React.useMemo(
-    () => TEMPLATES.filter((t) => t.categoryId === activeCategoryId),
-    [activeCategoryId]
+    () => templates.filter((t) => t.categoryId === activeCategoryId),
+    [templates, activeCategoryId]
   );
 
   const activeTemplate =
-    TEMPLATES.find((t) => t.id === activeTemplateId) ?? activeTemplates[0] ?? TEMPLATES[0];
+    templates.find((t) => t.id === activeTemplateId) ?? activeTemplates[0] ?? templates[0];
 
   const activeConfig: TemplateConfig = configById[activeTemplate.id] ?? {
     title: activeTemplate.defaultTitle,
@@ -234,6 +233,37 @@ const ComponentMarket: React.FC = () => {
     }));
   };
 
+  const handleTemplateMetaChange = (patch: Partial<QuestionTemplate>) => {
+    setTemplates((prev) => prev.map((t) => (t.id === activeTemplate.id ? { ...t, ...patch } : t)));
+  };
+
+  const handleCreateTemplateFromCurrent = () => {
+    if (!activeTemplate) return;
+
+    const baseName = activeTemplate.name || "新题型";
+    const timestamp = Date.now().toString(36);
+    const newId = `${activeTemplate.type}-${timestamp}`;
+
+    const newTemplate: QuestionTemplate = {
+      ...activeTemplate,
+      id: newId,
+      name: `${baseName}（副本）`,
+      defaultTitle: activeConfig.title,
+      defaultDescription: activeConfig.description,
+      defaultOptions: [...activeConfig.options]
+    };
+
+    setTemplates((prev) => [...prev, newTemplate]);
+    setConfigById((prev) => ({
+      ...prev,
+      [newId]: {
+        ...activeConfig
+      }
+    }));
+    setActiveTemplateId(newId);
+    setActiveCategoryId(newTemplate.categoryId);
+  };
+
   return (
     <div>
       <Layout style={{ minHeight: "100vh" }}>
@@ -246,6 +276,9 @@ const ComponentMarket: React.FC = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/builder")}>
               模板创建
             </Button>
+            <Button icon={<CopyOutlined />} onClick={handleCreateTemplateFromCurrent}>
+              新建题型模板
+            </Button>
           </div>
 
           <Layout className="app-body market-body">
@@ -254,7 +287,7 @@ const ComponentMarket: React.FC = () => {
               categories={CATEGORIES}
               activeCategoryId={activeCategoryId}
               onCategoryChange={setActiveCategoryId}
-              templates={TEMPLATES}
+              templates={templates}
               activeTemplateId={activeTemplateId}
               onTemplateChange={setActiveTemplateId}
             />
@@ -273,6 +306,7 @@ const ComponentMarket: React.FC = () => {
               template={activeTemplate}
               config={activeConfig}
               onConfigChange={handleConfigChange}
+              onTemplateMetaChange={handleTemplateMetaChange}
             />
           </Layout>
         </Content>

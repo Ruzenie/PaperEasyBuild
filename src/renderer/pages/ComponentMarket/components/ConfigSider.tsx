@@ -1,18 +1,8 @@
 import React from "react";
 import { Layout, Button, Input, InputNumber, Radio } from "antd";
-import type {
-  QuestionTemplate,
-  TemplateConfig,
-  TextStyleConfig
-} from "@renderer/type/ComponentMarket";
+import type { ConfigSiderProps, TextStyleConfig } from "@renderer/type/ComponentMarket";
 
 const { Sider } = Layout;
-
-interface ConfigSiderProps {
-  template: QuestionTemplate;
-  config: TemplateConfig;
-  onConfigChange: (patch: Partial<TemplateConfig>) => void;
-}
 
 const renderTextStyleControls = (
   label: string,
@@ -75,12 +65,28 @@ const renderTextStyleControls = (
   </div>
 );
 
-const ConfigSider: React.FC<ConfigSiderProps> = ({ template, config, onConfigChange }) => {
+const ConfigSider: React.FC<ConfigSiderProps> = ({
+  template,
+  config,
+  onConfigChange,
+  onTemplateMetaChange
+}) => {
   const options = config.options;
 
   return (
     <Sider width={280} className="panel panel-right" theme="light">
       <div className="panel-title">默认配置</div>
+
+      {onTemplateMetaChange && (
+        <div className="property-group">
+          <div className="property-label">模板名称</div>
+          <Input
+            size="small"
+            value={template.name}
+            onChange={(e) => onTemplateMetaChange({ name: e.target.value })}
+          />
+        </div>
+      )}
 
       <div className="property-group">
         <div className="property-label">题目标题</div>
@@ -115,7 +121,8 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({ template, config, onConfigCha
       {(template.type === "singleChoice" ||
         template.type === "multiChoice" ||
         template.type === "rating" ||
-        template.type === "judge") && (
+        template.type === "judge" ||
+        template.type === "slider") && (
         <div className="property-group">
           <div className="property-label">题目选项（至少 2 个）</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
