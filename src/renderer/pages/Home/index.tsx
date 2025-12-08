@@ -101,6 +101,8 @@ const Home: React.FC = () => {
           </Button>
           <Button
             icon={<CompassOutlined />}
+            color="cyan"
+            variant="solid"
             onClick={() => {
               navigate("/market");
             }}

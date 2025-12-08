@@ -6,13 +6,15 @@ const isDev = !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 
 function createMainWindow() {
+  const iconPath = path.join(app.getAppPath(), "src/assets/PaperEasyBuild.png");
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
     minHeight: 640,
+    icon: iconPath,
     webPreferences: {
-      // Use a preload script and keep the renderer sandboxed.
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
       nodeIntegration: false

@@ -1,69 +1,9 @@
 import React from "react";
-import { Layout, Button, Input, InputNumber, Radio } from "antd";
-import type { ConfigSiderProps, TextStyleConfig } from "@renderer/type/ComponentMarket";
+import { Layout, Button, Input } from "antd";
+import TextStyleControls from "@renderer/component/TextStyleControls";
+import type { ConfigSiderProps } from "@renderer/type/ComponentMarket";
 
 const { Sider } = Layout;
-
-const renderTextStyleControls = (
-  label: string,
-  style: TextStyleConfig,
-  onStyleChange: (patch: Partial<TextStyleConfig>) => void
-) => (
-  <div className="property-group">
-    <div className="property-label">{label}</div>
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-      <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>对齐</span>
-      <Radio.Group
-        size="small"
-        value={style.align}
-        onChange={(e) => onStyleChange({ align: e.target.value })}
-        optionType="button"
-      >
-        <Radio.Button value="left">左</Radio.Button>
-        <Radio.Button value="center">中</Radio.Button>
-      </Radio.Group>
-      <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>字号</span>
-      <InputNumber
-        size="small"
-        min={10}
-        max={40}
-        value={style.fontSize}
-        onChange={(value) => {
-          if (typeof value === "number") {
-            onStyleChange({ fontSize: value });
-          }
-        }}
-      />
-      <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>颜色</span>
-      <input
-        type="color"
-        value={style.color}
-        onChange={(e) => onStyleChange({ color: e.target.value })}
-        style={{
-          width: 32,
-          height: 24,
-          border: "none",
-          padding: 0,
-          background: "transparent"
-        }}
-      />
-      <Button
-        size="small"
-        type={style.bold ? "primary" : "default"}
-        onClick={() => onStyleChange({ bold: !style.bold })}
-      >
-        B
-      </Button>
-      <Button
-        size="small"
-        type={style.italic ? "primary" : "default"}
-        onClick={() => onStyleChange({ italic: !style.italic })}
-      >
-        I
-      </Button>
-    </div>
-  </div>
-);
 
 const ConfigSider: React.FC<ConfigSiderProps> = ({
   template,
@@ -97,11 +37,15 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({
         />
       </div>
 
-      {renderTextStyleControls("标题样式", config.titleStyle, (patch) =>
-        onConfigChange({
-          titleStyle: { ...config.titleStyle, ...patch }
-        })
-      )}
+      <TextStyleControls
+        label="标题样式"
+        style={config.titleStyle}
+        onStyleChange={(patch) =>
+          onConfigChange({
+            titleStyle: { ...config.titleStyle, ...patch }
+          })
+        }
+      />
 
       <div className="property-group">
         <div className="property-label">描述</div>
@@ -112,11 +56,15 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({
         />
       </div>
 
-      {renderTextStyleControls("描述样式", config.descriptionStyle, (patch) =>
-        onConfigChange({
-          descriptionStyle: { ...config.descriptionStyle, ...patch }
-        })
-      )}
+      <TextStyleControls
+        label="描述样式"
+        style={config.descriptionStyle}
+        onStyleChange={(patch) =>
+          onConfigChange({
+            descriptionStyle: { ...config.descriptionStyle, ...patch }
+          })
+        }
+      />
 
       {(template.type === "singleChoice" ||
         template.type === "multiChoice" ||
@@ -173,11 +121,15 @@ const ConfigSider: React.FC<ConfigSiderProps> = ({
             </Button>
           </div>
 
-          {renderTextStyleControls("选项样式", config.optionStyle, (patch) =>
-            onConfigChange({
-              optionStyle: { ...config.optionStyle, ...patch }
-            })
-          )}
+          <TextStyleControls
+            label="选项样式"
+            style={config.optionStyle}
+            onStyleChange={(patch) =>
+              onConfigChange({
+                optionStyle: { ...config.optionStyle, ...patch }
+              })
+            }
+          />
         </div>
       )}
     </Sider>

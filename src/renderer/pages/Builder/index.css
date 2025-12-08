@@ -1,0 +1,126 @@
+.builder-canvas-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.builder-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.builder-canvas-toolbar-label {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.builder-canvas-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 24px 0;
+  border-radius: 8px;
+  border: 1px dashed #e5e7eb;
+  background: #f3f4f6;
+  overflow: auto; /* allow both vertical and horizontal scroll */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.builder-canvas {
+  position: relative;
+  flex-shrink: 0; /* keep真实尺寸，不因父容器收缩 */
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.builder-canvas-size-label {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.builder-canvas-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: #9ca3af;
+}
+
+.builder-question-list {
+  padding: 48px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.builder-question-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+
+.builder-question-item:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.builder-question-item--active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
+  background: #eff6ff;
+}
+
+.builder-question-item--dragging {
+  opacity: 0.72;
+  cursor: grabbing;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
+}
+
+.builder-question-item--over {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.builder-question-meta {
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+.builder-double {
+  display: flex;
+  height: 100%;
+}
+
+.builder-double-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.builder-double-divider {
+  width: 2px;
+  margin: 32px 12px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #d1d5db 0,
+    #d1d5db 10px,
+    transparent 10px,
+    transparent 18px
+  );
+  border-radius: 2px;
+}

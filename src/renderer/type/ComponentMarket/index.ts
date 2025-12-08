@@ -50,16 +50,6 @@ export interface TemplateConfig {
   optionStyle: TextStyleConfig;
 }
 
-// 组件市场页面内部使用的 Props 类型
-export interface CategorySiderProps {
-  categories: QuestionCategory[];
-  activeCategoryId: QuestionCategoryId;
-  onCategoryChange: (id: QuestionCategoryId) => void;
-  templates: QuestionTemplate[];
-  activeTemplateId: string;
-  onTemplateChange: (templateId: string) => void;
-}
-
 export interface PreviewPanelProps {
   template: QuestionTemplate;
   config: TemplateConfig;

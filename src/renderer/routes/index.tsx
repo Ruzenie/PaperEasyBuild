@@ -27,8 +27,8 @@ export const router = createHashRouter([
         element: <PreviewPage />
       },
       {
-        path:"Market",
-        element:<ComponentMarket />
+        path: "market",
+        element: <ComponentMarket />
       },
       {
         path: "*",
