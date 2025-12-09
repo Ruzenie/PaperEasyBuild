@@ -22,11 +22,9 @@ function createMainWindow() {
   });
 
   if (isDev) {
-    // In dev mode we expect the Vite dev server to be running.
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the built index.html from Vite.
     const indexHtml = path.join(__dirname, "../renderer/index.html");
     mainWindow.loadFile(indexHtml);
   }

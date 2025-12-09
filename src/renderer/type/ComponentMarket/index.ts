@@ -24,13 +24,10 @@ export type QuestionTemplateType =
   | "longText"
   | "name"
   | "phone"
-  // exam-style types
-  | "judge" // 判断题（对/错）
-  | "fillBlank" // 填空题
-  // 新增基础题型示例：滑块题
+  | "judge"
+  | "fillBlank"
   | "slider"
-  | "note"; // 备注说明题
-
+  | "note";
 export interface QuestionTemplate {
   id: string;
   categoryId: QuestionCategoryId;
@@ -53,7 +50,6 @@ export interface TemplateConfig {
 export interface PreviewPanelProps {
   template: QuestionTemplate;
   config: TemplateConfig;
-  // 允许在画布中直接编辑标题 / 描述 / 选项
   onConfigChange: (patch: Partial<TemplateConfig>) => void;
 }
 
@@ -61,6 +57,5 @@ export interface ConfigSiderProps {
   template: QuestionTemplate;
   config: TemplateConfig;
   onConfigChange: (patch: Partial<TemplateConfig>) => void;
-  // 允许修改模板自身的元信息（例如模板名称）
   onTemplateMetaChange?: (patch: Partial<QuestionTemplate>) => void;
 }

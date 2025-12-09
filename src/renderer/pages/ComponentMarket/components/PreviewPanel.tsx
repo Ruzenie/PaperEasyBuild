@@ -12,7 +12,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config, onConfigC
 
   return (
     <section className="canvas">
-      {/* 标题：在画布中直接编辑 */}
       <div className="canvas-field-editable">
         <input
           className="canvas-title"
@@ -32,8 +31,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ template, config, onConfigC
           }}
         />
       </div>
-
-      {/* 描述：在画布中直接编辑 */}
       <div className="canvas-field-editable">
         <textarea
           className="canvas-desc"

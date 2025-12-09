@@ -51,7 +51,6 @@ const TemplateSider: React.FC<TemplateSiderProps> = ({
       {title && <div className="panel-title">{title}</div>}
 
       <div className="property-group">
-        <div className="property-label">题型分组</div>
         {categoryVariant === "sticky" ? (
           <div className="template-sider-strip">
             {categories.map((cat) => {
@@ -90,7 +89,9 @@ const TemplateSider: React.FC<TemplateSiderProps> = ({
           {visibleTemplates.map((tpl) => (
             <div
               key={tpl.id}
-              className={"component-item" + (tpl.id === activeTemplateId ? " component-item--active" : "")}
+              className={
+                "component-item" + (tpl.id === activeTemplateId ? " component-item--active" : "")
+              }
               onClick={() => onTemplateClick(tpl)}
             >
               {tpl.name}

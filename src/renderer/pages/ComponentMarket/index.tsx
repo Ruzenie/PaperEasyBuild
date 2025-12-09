@@ -1,7 +1,7 @@
 import React from "react";
-import { Layout, Button } from "antd";
+import { Layout, Button, Spin, Popconfirm, message } from "antd";
 import { useNavigate } from "react-router-dom";
-import { LeftOutlined, PlusOutlined, CopyOutlined } from "@ant-design/icons";
+import { LeftOutlined, PlusOutlined, CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import PaperHeader from "../../component/PaperHeader";
 import PaperFooter from "../../component/PaperFooter";
 import type {
@@ -9,59 +9,59 @@ import type {
   QuestionTemplate,
   TemplateConfig
 } from "@renderer/type/ComponentMarket";
-import { QUESTION_CATEGORIES, BASE_QUESTION_TEMPLATES } from "@renderer/config/questionTemplates";
+import {
+  QUESTION_CATEGORIES,
+  BASE_QUESTION_TEMPLATES,
+  BASE_TEMPLATE_IDS
+} from "@renderer/config/questionTemplates";
 import PreviewPanel from "./components/PreviewPanel";
 import ConfigSider from "./components/ConfigSider";
 import TemplateSider from "../../component/TextStyleControls/TemplateSider";
+import {
+  buildDefaultConfigFromTemplate,
+  loadTemplateConfigs,
+  loadTemplates,
+  saveTemplate,
+  saveTemplateConfig,
+  deleteTemplate
+} from "@renderer/db";
 import "./index.css";
 
 const { Content } = Layout;
 
-const buildInitialConfig = (templates: QuestionTemplate[]): Record<string, TemplateConfig> => {
-  const result: Record<string, TemplateConfig> = {};
-  for (const t of templates) {
-    const baseOptions =
-      t.defaultOptions && t.defaultOptions.length >= 2 ? t.defaultOptions : ["选项1", "选项2"];
-
-    result[t.id] = {
-      title: t.defaultTitle,
-      description: t.defaultDescription ?? "",
-      options: baseOptions,
-      titleStyle: {
-        align: "left",
-        fontSize: 18,
-        color: "#111827",
-        bold: true,
-        italic: false
-      },
-      descriptionStyle: {
-        align: "left",
-        fontSize: 13,
-        color: "#6b7280",
-        bold: false,
-        italic: false
-      },
-      optionStyle: {
-        align: "left",
-        fontSize: 14,
-        color: "#374151",
-        bold: false,
-        italic: false
-      }
-    };
-  }
-  return result;
-};
-
 const ComponentMarket: React.FC = () => {
   const navigate = useNavigate();
 
-  const [templates, setTemplates] = React.useState<QuestionTemplate[]>(BASE_QUESTION_TEMPLATES);
+  const [templates, setTemplates] = React.useState<QuestionTemplate[]>([]);
   const [activeCategoryId, setActiveCategoryId] = React.useState<QuestionCategoryId>("choice");
-  const [activeTemplateId, setActiveTemplateId] = React.useState<string>("singleChoice-basic");
-  const [configById, setConfigById] = React.useState<Record<string, TemplateConfig>>(() =>
-    buildInitialConfig(BASE_QUESTION_TEMPLATES)
-  );
+  const [activeTemplateId, setActiveTemplateId] = React.useState<string>("");
+  const [configById, setConfigById] = React.useState<Record<string, TemplateConfig>>({});
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const bootstrap = async () => {
+      setLoading(true);
+      const [tpls, configs] = await Promise.all([loadTemplates(), loadTemplateConfigs()]);
+      if (!mounted) return;
+
+      const configMap: Record<string, TemplateConfig> = {};
+      for (const tpl of tpls) {
+        configMap[tpl.id] = configs[tpl.id] ?? buildDefaultConfigFromTemplate(tpl);
+      }
+
+      setTemplates(tpls);
+      setConfigById(configMap);
+      setActiveTemplateId((prev) => prev || tpls[0]?.id || "");
+      setActiveCategoryId((prev) => prev || tpls[0]?.categoryId || "choice");
+      setLoading(false);
+    };
+
+    bootstrap();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const activeTemplates = React.useMemo(
     () => templates.filter((t) => t.categoryId === activeCategoryId),
@@ -71,37 +71,12 @@ const ComponentMarket: React.FC = () => {
   const activeTemplate =
     templates.find((t) => t.id === activeTemplateId) ?? activeTemplates[0] ?? templates[0];
 
-  const activeConfig: TemplateConfig = configById[activeTemplate.id] ?? {
-    title: activeTemplate.defaultTitle,
-    description: activeTemplate.defaultDescription ?? "",
-    options:
-      activeTemplate.defaultOptions && activeTemplate.defaultOptions.length >= 2
-        ? activeTemplate.defaultOptions
-        : ["选项1", "选项2"],
-    titleStyle: {
-      align: "left",
-      fontSize: 18,
-      color: "#111827",
-      bold: true,
-      italic: false
-    },
-    descriptionStyle: {
-      align: "left",
-      fontSize: 13,
-      color: "#6b7280",
-      bold: false,
-      italic: false
-    },
-    optionStyle: {
-      align: "left",
-      fontSize: 14,
-      color: "#374151",
-      bold: false,
-      italic: false
-    }
-  };
+  const activeConfig: TemplateConfig = activeTemplate
+    ? configById[activeTemplate.id] ?? buildDefaultConfigFromTemplate(activeTemplate)
+    : buildDefaultConfigFromTemplate(BASE_QUESTION_TEMPLATES[0]);
 
   const handleConfigChange = (patch: Partial<TemplateConfig>) => {
+    if (!activeTemplate) return;
     setConfigById((prev) => ({
       ...prev,
       [activeTemplate.id]: {
@@ -109,13 +84,16 @@ const ComponentMarket: React.FC = () => {
         ...patch
       }
     }));
+    saveTemplateConfig(activeTemplate.id, { ...activeConfig, ...patch });
   };
 
   const handleTemplateMetaChange = (patch: Partial<QuestionTemplate>) => {
+    if (!activeTemplate) return;
     setTemplates((prev) => prev.map((t) => (t.id === activeTemplate.id ? { ...t, ...patch } : t)));
+    saveTemplate({ ...activeTemplate, ...patch });
   };
 
-  const handleCreateTemplateFromCurrent = () => {
+  const handleCreateTemplateFromCurrent = async () => {
     if (!activeTemplate) return;
 
     const baseName = activeTemplate.name || "新题型";
@@ -140,6 +118,32 @@ const ComponentMarket: React.FC = () => {
     }));
     setActiveTemplateId(newId);
     setActiveCategoryId(newTemplate.categoryId);
+    await saveTemplate(newTemplate);
+    await saveTemplateConfig(newId, { ...activeConfig });
+  };
+
+  const handleDeleteCurrentTemplate = async () => {
+    if (!activeTemplate) return;
+    if (BASE_TEMPLATE_IDS.has(activeTemplate.id)) {
+      message.warning("默认题型不可删除");
+      return;
+    }
+    try {
+      await deleteTemplate(activeTemplate.id);
+      setTemplates((prev) => prev.filter((t) => t.id !== activeTemplate.id));
+      setConfigById((prev) => {
+        const next = { ...prev };
+        delete next[activeTemplate.id];
+        return next;
+      });
+
+      const nextTemplate = templates.find((t) => t.id !== activeTemplate.id);
+      setActiveTemplateId(nextTemplate?.id ?? "");
+      setActiveCategoryId(nextTemplate?.categoryId ?? activeCategoryId);
+      message.success("已删除该题型");
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "删除失败");
+    }
   };
 
   return (
@@ -157,10 +161,24 @@ const ComponentMarket: React.FC = () => {
             <Button icon={<CopyOutlined />} onClick={handleCreateTemplateFromCurrent}>
               新建题型模板
             </Button>
+            <Popconfirm
+              title="确认删除该题型？"
+              okText="删除"
+              cancelText="取消"
+              onConfirm={handleDeleteCurrentTemplate}
+              disabled={!activeTemplate || BASE_TEMPLATE_IDS.has(activeTemplate.id)}
+            >
+              <Button
+                icon={<DeleteOutlined />}
+                danger
+                disabled={!activeTemplate || BASE_TEMPLATE_IDS.has(activeTemplate.id)}
+              >
+                删除题型
+              </Button>
+            </Popconfirm>
           </div>
 
           <Layout className="app-body market-body">
-            {/* 左侧：题型分组与列表 */}
             <TemplateSider
               width={200}
               className="panel market-panel"
@@ -174,23 +192,34 @@ const ComponentMarket: React.FC = () => {
               templateTitle="模板列表"
               categoryVariant="sticky"
             />
-
-            {/* 中间：题目实时预览 */}
             <Content className="canvas-wrapper">
-              <PreviewPanel
+              {loading || !activeTemplate ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%"
+                  }}
+                >
+                  <Spin />
+                </div>
+              ) : (
+                <PreviewPanel
+                  template={activeTemplate}
+                  config={activeConfig}
+                  onConfigChange={handleConfigChange}
+                />
+              )}
+            </Content>
+            {activeTemplate && (
+              <ConfigSider
                 template={activeTemplate}
                 config={activeConfig}
                 onConfigChange={handleConfigChange}
+                onTemplateMetaChange={handleTemplateMetaChange}
               />
-            </Content>
-
-            {/* 右侧：配置面板 */}
-            <ConfigSider
-              template={activeTemplate}
-              config={activeConfig}
-              onConfigChange={handleConfigChange}
-              onTemplateMetaChange={handleTemplateMetaChange}
-            />
+            )}
           </Layout>
         </Content>
         <PaperFooter />

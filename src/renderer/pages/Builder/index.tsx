@@ -1,9 +1,9 @@
 import React from "react";
-import { Layout, Button, message, Select } from "antd";
+import { Layout, Button, message, Select, Input, Spin, Modal } from "antd";
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { CompassOutlined, LeftOutlined, SaveOutlined, EyeOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PaperFooter from "../../component/PaperFooter";
 import PaperHeader from "../../component/PaperHeader";
 import TemplateSider from "../../component/TextStyleControls/TemplateSider";
@@ -11,25 +11,32 @@ import QuestionCanvas from "./components/QuestionCanvas";
 import QuestionEditor from "./components/QuestionEditor";
 import type { PaperSizeId, QuestionDefinition, QuestionType } from "@renderer/type/Builder";
 import type { QuestionCategoryId, QuestionTemplate } from "@renderer/type/ComponentMarket";
-import { QUESTION_CATEGORIES, BASE_QUESTION_TEMPLATES } from "@renderer/config/questionTemplates";
+import { QUESTION_CATEGORIES } from "@renderer/config/questionTemplates";
 import {
   DEFAULT_DESCRIPTION_STYLE,
   DEFAULT_OPTION_STYLE,
   DEFAULT_TITLE_STYLE,
   PAPER_SIZE_PRESETS
 } from "./constants";
+import { getQuestionnaire, loadTemplates, saveQuestionnaire } from "@renderer/db";
 import "./index.css";
 
 const { Content, Sider } = Layout;
 
 const Builder: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeCategoryId, setActiveCategoryId] = React.useState<QuestionCategoryId>("choice");
   const [questions, setQuestions] = React.useState<QuestionDefinition[]>([]);
   const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(null);
   const [paperSize, setPaperSize] = React.useState<PaperSizeId>("A4");
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [activeTemplateId, setActiveTemplateId] = React.useState<string | null>(null);
+  const [paperTitle, setPaperTitle] = React.useState<string>("未命名问卷");
+  const [currentQuestionnaireId, setCurrentQuestionnaireId] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [templates, setTemplates] = React.useState<QuestionTemplate[]>([]);
+  const [saving, setSaving] = React.useState<boolean>(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -39,9 +46,66 @@ const Builder: React.FC = () => {
     })
   );
 
-  const handleSave = () => {
-    // TODO: 接入真实保存逻辑，目前仅做示例提示
-    message.success("问卷已保存（示例）");
+  const handleSave = async () => {
+    const name = paperTitle.trim();
+    if (!name) {
+      message.warning("请先输入问卷名称再保存");
+      return;
+    }
+    if (name === "未命名问卷") {
+      message.warning("请为问卷重命名再保存");
+      return;
+    }
+    try {
+      setSaving(true);
+      const record = await saveQuestionnaire({
+        id: currentQuestionnaireId ?? undefined,
+        name,
+        paperSize,
+        questions
+      });
+      setCurrentQuestionnaireId(record.id);
+      message.success("问卷已保存到本地");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handlePreview = () => {
+    const name = paperTitle.trim();
+    if (!name) {
+      message.warning("请先输入问卷名称再预览");
+      return;
+    }
+    if (name === "未命名问卷") {
+      message.warning("请为问卷重命名再保存");
+      return;
+    }
+    if (currentQuestionnaireId) {
+      navigate(`/preview?id=${currentQuestionnaireId}`);
+      return;
+    }
+
+    Modal.confirm({
+      title: "预览前需要保存，是否保存？",
+      okText: "保存并预览",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          setSaving(true);
+          const record = await saveQuestionnaire({
+            id: currentQuestionnaireId ?? undefined,
+            name,
+            paperSize,
+            questions
+          });
+          setCurrentQuestionnaireId(record.id);
+          message.success("已保存，正在前往预览");
+          navigate(`/preview?id=${record.id}`);
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const activeSize = PAPER_SIZE_PRESETS[paperSize];
@@ -110,6 +174,61 @@ const Builder: React.FC = () => {
   const activeQuestion =
     activeQuestionId != null ? questions.find((q) => q.id === activeQuestionId) ?? null : null;
 
+  React.useEffect(() => {
+    let mounted = true;
+    const loadDraft = async () => {
+      setLoading(true);
+      const targetId = searchParams.get("id");
+
+      if (targetId) {
+        const draft = await getQuestionnaire(targetId);
+        if (!mounted) return;
+        if (draft) {
+          setCurrentQuestionnaireId(draft.id);
+          setPaperTitle(draft.name);
+          setPaperSize(draft.paperSize);
+          setQuestions(draft.questions);
+          setActiveQuestionId(draft.questions[0]?.id ?? null);
+        } else {
+          message.warning("未找到指定的问卷，已为你创建新问卷");
+          setCurrentQuestionnaireId(null);
+          setPaperTitle("未命名问卷");
+          setPaperSize("A4");
+          setQuestions([]);
+          setActiveQuestionId(null);
+        }
+      } else {
+        setCurrentQuestionnaireId(null);
+        setPaperTitle("未命名问卷");
+        setPaperSize("A4");
+        setQuestions([]);
+        setActiveQuestionId(null);
+      }
+      setLoading(false);
+    };
+
+    loadDraft();
+    return () => {
+      mounted = false;
+    };
+  }, [searchParams]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    loadTemplates().then((tpls) => {
+      if (!mounted) return;
+      setTemplates(tpls);
+      if (!activeTemplateId && tpls[0]) {
+        setActiveTemplateId(tpls[0].id);
+        setActiveCategoryId(tpls[0].categoryId);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <Layout style={{ height: "100vh", overflow: "hidden" }}>
       <PaperHeader />
@@ -121,9 +240,25 @@ const Builder: React.FC = () => {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          minHeight: 0
+          minHeight: 0,
+          position: "relative"
         }}
       >
+        {(loading || saving) && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(255,255,255,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 5
+            }}
+          >
+            <Spin />
+          </div>
+        )}
         <div
           style={{
             display: "flex",
@@ -146,11 +281,18 @@ const Builder: React.FC = () => {
               组件市场
             </Button>
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <Button icon={<SaveOutlined />} onClick={handleSave}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Input
+              size="middle"
+              style={{ width: 260 }}
+              value={paperTitle}
+              placeholder="输入问卷名称"
+              onChange={(e) => setPaperTitle(e.target.value)}
+            />
+            <Button icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
               保存问卷
             </Button>
-            <Button icon={<EyeOutlined />} type="primary" onClick={() => navigate("/preview")}>
+            <Button icon={<EyeOutlined />} type="primary" loading={saving} onClick={handlePreview}>
               页面预览
             </Button>
           </div>
@@ -169,7 +311,7 @@ const Builder: React.FC = () => {
             categories={QUESTION_CATEGORIES}
             activeCategoryId={activeCategoryId}
             onCategoryChange={setActiveCategoryId}
-            templates={BASE_QUESTION_TEMPLATES}
+            templates={templates}
             activeTemplateId={activeTemplateId ?? undefined}
             onTemplateClick={(tpl) => {
               setActiveTemplateId(tpl.id);

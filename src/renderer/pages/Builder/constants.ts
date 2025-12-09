@@ -11,7 +11,6 @@ export type PaperSizePreset = {
 export const PAPER_SIZE_PRESETS: Record<PaperSizeId, PaperSizePreset> = {
   A4: {
     label: "A4 纵向",
-    // 约等于 210mm × 297mm 在 96DPI 下的像素尺寸
     width: 794,
     height: 1123,
     description: "210 × 297 mm"
@@ -30,7 +29,6 @@ export const PAPER_SIZE_PRESETS: Record<PaperSizeId, PaperSizePreset> = {
   },
   ExamDouble: {
     label: "A4 试卷（双页）",
-    // 近似为两张 A4 竖版并排，中间预留一点装订空白
     width: 794 * 2 + 48,
     height: 1123,
     description: "左右两页双栏试卷版式"

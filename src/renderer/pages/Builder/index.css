@@ -25,7 +25,7 @@
   border-radius: 8px;
   border: 1px dashed #e5e7eb;
   background: #f3f4f6;
-  overflow: auto; /* allow both vertical and horizontal scroll */
+  overflow: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -33,7 +33,7 @@
 
 .builder-canvas {
   position: relative;
-  flex-shrink: 0; /* keep真实尺寸，不因父容器收缩 */
+  flex-shrink: 0;
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);

@@ -31,9 +31,8 @@ export const getQuestionTypeLabel = (type: QuestionType): string => {
   }
 };
 
-// 估算每道题在画布上的高度（像素），用于自动分页
 export const estimateQuestionHeight = (q: QuestionDefinition): number => {
-  let height = 56; // meta 行 + 标题行 + 卡片内边距
+  let height = 56;
 
   if (q.description) {
     height += 28;
@@ -42,11 +41,11 @@ export const estimateQuestionHeight = (q: QuestionDefinition): number => {
   const optionCount = q.options?.length ?? 0;
 
   if (q.type === "singleChoice" || q.type === "multiChoice" || q.type === "judge") {
-    height += optionCount * 28; // 每个选项大约一行
+    height += optionCount * 28;
   } else if (q.type === "rating") {
-    height += 52; // 一行圆形打分按钮
+    height += 52;
   } else if (q.type === "slider") {
-    height += 64; // 滑条 + 底部刻度
+    height += 64;
   } else if (
     q.type === "shortText" ||
     q.type === "fillBlank" ||
@@ -54,13 +53,11 @@ export const estimateQuestionHeight = (q: QuestionDefinition): number => {
     q.type === "name" ||
     q.type === "phone"
   ) {
-    height += 40; // 一行输入框
+    height += 40;
   } else if (q.type === "longText") {
-    height += 96; // 多行输入框
+    height += 96;
   } else if (q.type === "note") {
-    height += 60; // 备注块
+    height += 60;
   }
-
-  // 预留题目之间的间距（gap）
   return height + 12;
 };

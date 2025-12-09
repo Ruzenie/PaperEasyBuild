@@ -1,5 +1,5 @@
 import React from "react";
-import { Layout, Button, Table, Space, Popconfirm } from "antd";
+import { Layout, Button, Table, Space, Popconfirm, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
   EditOutlined,
@@ -10,36 +10,39 @@ import {
 } from "@ant-design/icons";
 import PaperHeader from "@renderer/component/PaperHeader";
 import PaperFooter from "@renderer/component/PaperFooter";
-import type { TemplateRecord } from "@renderer/type/Home";
+import type { QuestionnaireRecord } from "@renderer/db";
+import { deleteQuestionnaire, listQuestionnaires } from "@renderer/db";
 
 const { Content } = Layout;
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
 
-  const [templates, setTemplates] = React.useState<TemplateRecord[]>([
-    {
-      key: "1",
-      createdAt: "2025-01-01 10:00",
-      name: "用户满意度调查",
-      questionCount: 10,
-      updatedAt: "2025-01-02 09:30"
-    },
-    {
-      key: "2",
-      createdAt: "2025-01-03 14:20",
-      name: "产品功能反馈",
-      questionCount: 8,
-      updatedAt: "2025-01-04 11:15"
-    }
-  ]);
+  const [templates, setTemplates] = React.useState<QuestionnaireRecord[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(false);
+
+  const fetchTemplates = React.useCallback(async () => {
+    setLoading(true);
+    const records = await listQuestionnaires();
+    setTemplates(records);
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString();
+  };
 
   const columns = [
     {
       title: "创建日期",
       dataIndex: "createdAt",
       key: "createdAt",
-      width: 180
+      width: 180,
+      render: (value: number) => formatTime(value)
     },
     {
       title: "模板名称",
@@ -48,26 +51,36 @@ const Home: React.FC = () => {
     },
     {
       title: "题目数",
-      dataIndex: "questionCount",
       key: "questionCount",
-      width: 100
+      width: 100,
+      render: (_: unknown, record: QuestionnaireRecord) => record.questions.length
     },
     {
       title: "最近更新日期",
       dataIndex: "updatedAt",
       key: "updatedAt",
-      width: 180
+      width: 180,
+      render: (value: number) => formatTime(value)
     },
     {
       title: "操作",
       key: "action",
       width: 220,
-      render: (_: unknown, record: TemplateRecord) => (
+      render: (_: unknown, record: QuestionnaireRecord) => (
         <Space>
-          <Button type="primary" icon={<EditOutlined />} onClick={() => navigate("/builder")}>
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/builder?id=${record.id}`)}
+          >
             编辑
           </Button>
-          <Button type="primary" icon={<EyeOutlined />} onClick={() => navigate("/preview")} ghost>
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/preview?id=${record.id}`)}
+            ghost
+          >
             预览
           </Button>
           <Popconfirm
@@ -75,7 +88,10 @@ const Home: React.FC = () => {
             okText="删除"
             cancelText="取消"
             onConfirm={() => {
-              setTemplates((prev) => prev.filter((item) => item.key !== record.key));
+              deleteQuestionnaire(record.id).then(() => {
+                message.success("已删除");
+                fetchTemplates();
+              });
             }}
           >
             <Button type="primary" icon={<DeleteOutlined />} danger>
@@ -111,11 +127,13 @@ const Home: React.FC = () => {
           </Button>
         </div>
 
-        <Table<TemplateRecord>
+        <Table<QuestionnaireRecord>
           bordered
           columns={columns}
           dataSource={templates}
           pagination={false}
+          loading={loading}
+          rowKey="id"
         />
       </Content>
       <PaperFooter />

@@ -1,6 +1,5 @@
 import type { QuestionCategory, QuestionTemplate } from "@renderer/type/ComponentMarket";
 
-// 组件市场 & Builder 共用的题型分组
 export const QUESTION_CATEGORIES: QuestionCategory[] = [
   { id: "choice", name: "选择题" },
   { id: "text", name: "文本输入" },
@@ -10,7 +9,6 @@ export const QUESTION_CATEGORIES: QuestionCategory[] = [
   { id: "contact", name: "联系方式" }
 ];
 
-// 通用的题型模板预设，供组件市场和 Builder 使用
 export const BASE_QUESTION_TEMPLATES: QuestionTemplate[] = [
   {
     id: "note-basic",
@@ -89,7 +87,6 @@ export const BASE_QUESTION_TEMPLATES: QuestionTemplate[] = [
     defaultTitle: "请详细描述",
     defaultDescription: "适合输入较长的内容，例如意见反馈、问题描述等。"
   },
-  // 考试场景：填空 / 简答
   {
     id: "exam-fillBlank",
     categoryId: "text",
@@ -123,3 +120,5 @@ export const BASE_QUESTION_TEMPLATES: QuestionTemplate[] = [
     defaultDescription: "用于收集联系手机号，用于通知或回访。"
   }
 ];
+
+export const BASE_TEMPLATE_IDS = new Set(BASE_QUESTION_TEMPLATES.map((t) => t.id));
