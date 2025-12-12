@@ -4,13 +4,14 @@ import {
   DEFAULT_DESCRIPTION_STYLE,
   DEFAULT_OPTION_STYLE,
   DEFAULT_TITLE_STYLE
-} from "../constants";
+} from "@renderer/pages/Builder/constants";
 
 type QuestionPreviewProps = {
   question: QuestionDefinition;
+  disabled?: boolean;
 };
 
-const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
+const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question, disabled = true }) => {
   const titleStyle = question.titleStyle ?? DEFAULT_TITLE_STYLE;
   const descriptionStyle = question.descriptionStyle ?? DEFAULT_DESCRIPTION_STYLE;
   const optionStyle = question.optionStyle ?? DEFAULT_OPTION_STYLE;
@@ -50,7 +51,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
         <div>
           {options.map((opt, index) => (
             <div key={index} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <input type="radio" disabled />
+              <input type="radio" disabled={disabled} name={question.id} />
               <span
                 style={{
                   fontSize: optionStyle.fontSize,
@@ -70,7 +71,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
         <div>
           {options.map((opt, index) => (
             <div key={index} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-              <input type="checkbox" disabled />
+              <input type="checkbox" disabled={disabled} name={question.id} />
               <span
                 style={{
                   fontSize: optionStyle.fontSize,
@@ -119,7 +120,13 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
 
       {question.type === "slider" && (
         <div style={{ marginTop: 8 }}>
-          <input type="range" min={0} max={Math.max(options.length - 1, 1)} disabled style={{ width: "100%" }} />
+          <input
+            type="range"
+            min={0}
+            max={Math.max(options.length - 1, 1)}
+            disabled={disabled}
+            style={{ width: "100%" }}
+          />
           {options.length > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
               {options.map((opt, index) => (
@@ -143,7 +150,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
       {question.type === "date" && (
         <input
           type="date"
-          disabled
+          disabled={disabled}
           style={{
             marginTop: 4,
             padding: "0.35rem 0.45rem",
@@ -157,7 +164,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
       {(question.type === "shortText" || question.type === "fillBlank") && (
         <input
           type="text"
-          disabled
+          disabled={disabled}
           placeholder={question.type === "fillBlank" ? "在此填写答案" : "单行文本输入"}
           style={{
             marginTop: 4,
@@ -172,7 +179,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
 
       {question.type === "longText" && (
         <textarea
-          disabled
+          disabled={disabled}
           placeholder="多行文本输入"
           style={{
             marginTop: 4,
@@ -190,7 +197,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
       {question.type === "name" && (
         <input
           type="text"
-          disabled
+          disabled={disabled}
           placeholder="姓名"
           style={{
             marginTop: 4,
@@ -206,7 +213,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ question }) => {
       {question.type === "phone" && (
         <input
           type="tel"
-          disabled
+          disabled={disabled}
           placeholder="手机号"
           style={{
             marginTop: 4,

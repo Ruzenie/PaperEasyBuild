@@ -3,7 +3,7 @@ import { DndContext } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent, SensorDescriptor } from "@dnd-kit/core";
 import type { QuestionDefinition, PaperSizeId } from "@renderer/type/Builder";
 import DraggableQuestion from "./DraggableQuestion";
-import QuestionPreview from "./QuestionPreview";
+import QuestionPreview from "@renderer/component/QuestionPreview";
 import type { PaperSizePreset } from "../constants";
 import { estimateQuestionHeight, getQuestionTypeLabel } from "../utils";
 
