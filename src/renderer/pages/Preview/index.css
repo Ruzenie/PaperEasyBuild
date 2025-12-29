@@ -99,3 +99,34 @@
   color: #6b7280;
   font-size: 0.85rem;
 }
+
+@media print {
+  .preview-toolbar,
+  .ant-layout-header,
+  .ant-layout-footer {
+    display: none !important;
+  }
+
+  .preview-content {
+    padding: 0 !important;
+    background: #ffffff !important;
+    min-height: auto !important;
+  }
+
+  .preview-paper-wrapper {
+    justify-content: flex-start;
+  }
+
+  .preview-paper {
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .preview-question-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

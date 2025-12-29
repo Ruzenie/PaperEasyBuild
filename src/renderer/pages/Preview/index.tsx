@@ -1,6 +1,6 @@
 import React from "react";
 import { Layout, Button, Spin, Empty, Tag, Space, message } from "antd";
-import { LeftOutlined, EditOutlined, ReloadOutlined } from "@ant-design/icons";
+import { LeftOutlined, EditOutlined, ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PaperHeader from "../../component/PaperHeader";
 import PaperFooter from "../../component/PaperFooter";
@@ -17,6 +17,7 @@ const PreviewPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [questionnaire, setQuestionnaire] = React.useState<QuestionnaireRecord | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [exportingPdf, setExportingPdf] = React.useState(false);
 
   const loadQuestionnaire = React.useCallback(async () => {
     setLoading(true);
@@ -49,6 +50,41 @@ const PreviewPage: React.FC = () => {
 
   const paperSize = questionnaire ? PAPER_SIZE_PRESETS[questionnaire.paperSize] : null;
 
+  const handleExportPdf = React.useCallback(async () => {
+    if (!questionnaire) return;
+
+    const api = window.paperEasyAPI ?? window.electron;
+    const exportFn = api?.exportPreviewPdf;
+
+    const suggestedFileName = questionnaire.name || "试卷";
+    const normalizedPaperSize =
+      questionnaire.paperSize === "A5" ? "A5" : questionnaire.paperSize === "Letter" ? "Letter" : "A4";
+
+    if (typeof exportFn !== "function") {
+      message.info("当前环境不支持一键导出 PDF，将打开打印对话框。");
+      window.print();
+      return;
+    }
+
+    setExportingPdf(true);
+    try {
+      const result = await exportFn({
+        suggestedFileName,
+        pageSize: normalizedPaperSize,
+        landscape: questionnaire.paperSize === "ExamDouble"
+      });
+
+      if (!result.canceled) {
+        message.success(`已导出 PDF：${result.filePath}`);
+      }
+    } catch (error) {
+      const err = error as Error;
+      message.error(err.message || "导出 PDF 失败，请重试。");
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [questionnaire]);
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <PaperHeader />
@@ -67,9 +103,19 @@ const PreviewPage: React.FC = () => {
               返回编辑
             </Button>
           </Space>
-          <Button icon={<ReloadOutlined />} onClick={loadQuestionnaire} loading={loading}>
-            刷新
-          </Button>
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              disabled={!questionnaire}
+              loading={exportingPdf}
+              onClick={handleExportPdf}
+            >
+              下载 PDF
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={loadQuestionnaire} loading={loading}>
+              刷新
+            </Button>
+          </Space>
         </div>
 
         {loading ? (
