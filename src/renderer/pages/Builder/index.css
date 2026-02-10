@@ -57,11 +57,25 @@
   color: #9ca3af;
 }
 
+.builder-canvas-empty {
+  padding: 0 32px 32px;
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+.builder-paper-header {
+  padding: 48px 32px 12px;
+}
+
 .builder-question-list {
   padding: 48px 32px 32px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.builder-question-list--after-header {
+  padding-top: 0;
 }
 
 .builder-question-item {
@@ -103,6 +117,10 @@
 .builder-double {
   display: flex;
   height: 100%;
+}
+
+.builder-double--after-header .builder-double-divider {
+  margin-top: 0;
 }
 
 .builder-double-column {

@@ -1,5 +1,13 @@
+/** Builder（问卷/题目）相关类型定义。 */
 import type { QuestionTemplateType, TextStyleConfig } from "@renderer/type/ComponentMarket";
 export type QuestionType = QuestionTemplateType;
+
+export type QuestionnaireHeaderConfig = {
+  title?: string;
+  subtitle?: string;
+  titleStyle?: TextStyleConfig;
+  subtitleStyle?: TextStyleConfig;
+};
 
 export interface QuestionDefinition {
   id: string;

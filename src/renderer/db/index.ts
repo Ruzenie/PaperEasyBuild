@@ -1,7 +1,9 @@
+/** Dexie（IndexedDB）数据访问层。 */
 import Dexie, { type Table } from "dexie";
-import type { QuestionDefinition, PaperSizeId } from "@renderer/type/Builder";
+import type { QuestionDefinition, PaperSizeId, QuestionnaireHeaderConfig } from "@renderer/type/Builder";
 import type { QuestionTemplate, TemplateConfig } from "@renderer/type/ComponentMarket";
 import { BASE_QUESTION_TEMPLATES, BASE_TEMPLATE_IDS } from "@renderer/config/questionTemplates";
+import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
 
 export interface StoredTemplate extends QuestionTemplate {
   createdAt: number;
@@ -18,6 +20,7 @@ export interface QuestionnaireRecord {
   name: string;
   paperSize: PaperSizeId;
   questions: QuestionDefinition[];
+  header?: QuestionnaireHeaderConfig;
   createdAt: number;
   updatedAt: number;
 }
@@ -146,7 +149,13 @@ export interface SaveQuestionnairePayload {
   name: string;
   paperSize: PaperSizeId;
   questions: QuestionDefinition[];
+  header?: QuestionnaireHeaderConfig;
 }
+
+const normalizeQuestionnaireRecord = (record: QuestionnaireRecord): QuestionnaireRecord => ({
+  ...record,
+  header: normalizeQuestionnaireHeader(record.header)
+});
 
 export const saveQuestionnaire = async (
   payload: SaveQuestionnairePayload
@@ -155,29 +164,35 @@ export const saveQuestionnaire = async (
   const existing = payload.id ? await db.questionnaires.get(payload.id) : undefined;
   const id = payload.id ?? `qn_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
+  const header = normalizeQuestionnaireHeader(payload.header ?? existing?.header);
+
   const record: QuestionnaireRecord = {
     id,
     name: payload.name || existing?.name || "未命名问卷",
     paperSize: payload.paperSize,
     questions: payload.questions,
+    header,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now
   };
 
   await db.questionnaires.put(record);
-  return record;
+  return normalizeQuestionnaireRecord(record);
 };
 
 export const listQuestionnaires = async (): Promise<QuestionnaireRecord[]> => {
-  return db.questionnaires.orderBy("updatedAt").reverse().toArray();
+  const records = await db.questionnaires.orderBy("updatedAt").reverse().toArray();
+  return records.map(normalizeQuestionnaireRecord);
 };
 
 export const getQuestionnaire = async (id: string): Promise<QuestionnaireRecord | undefined> => {
-  return db.questionnaires.get(id);
+  const record = await db.questionnaires.get(id);
+  return record ? normalizeQuestionnaireRecord(record) : undefined;
 };
 
 export const getLatestQuestionnaire = async (): Promise<QuestionnaireRecord | undefined> => {
-  return db.questionnaires.orderBy("updatedAt").reverse().first();
+  const record = await db.questionnaires.orderBy("updatedAt").reverse().first();
+  return record ? normalizeQuestionnaireRecord(record) : undefined;
 };
 
 export const deleteQuestionnaire = async (id: string) => {

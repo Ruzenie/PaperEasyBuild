@@ -1,3 +1,4 @@
+/** 问卷编辑器页面：编辑题目、排版并保存/预览。 */
 import React from "react";
 import { Layout, Button, message, Select, Input, Spin, Modal } from "antd";
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -9,9 +10,11 @@ import PaperHeader from "../../component/PaperHeader";
 import TemplateSider from "../../component/TextStyleControls/TemplateSider";
 import QuestionCanvas from "./components/QuestionCanvas";
 import QuestionEditor from "./components/QuestionEditor";
+import QuestionnaireHeaderEditor from "./components/QuestionnaireHeaderEditor";
 import type { PaperSizeId, QuestionDefinition, QuestionType } from "@renderer/type/Builder";
 import type { QuestionCategoryId, QuestionTemplate } from "@renderer/type/ComponentMarket";
 import { QUESTION_CATEGORIES } from "@renderer/config/questionTemplates";
+import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
 import {
   DEFAULT_DESCRIPTION_STYLE,
   DEFAULT_OPTION_STYLE,
@@ -37,6 +40,7 @@ const Builder: React.FC = () => {
   const [loading, setLoading] = React.useState<boolean>(false);
   const [templates, setTemplates] = React.useState<QuestionTemplate[]>([]);
   const [saving, setSaving] = React.useState<boolean>(false);
+  const [headerConfig, setHeaderConfig] = React.useState(() => normalizeQuestionnaireHeader(undefined));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -62,7 +66,8 @@ const Builder: React.FC = () => {
         id: currentQuestionnaireId ?? undefined,
         name,
         paperSize,
-        questions
+        questions,
+        header: headerConfig
       });
       setCurrentQuestionnaireId(record.id);
       message.success("问卷已保存到本地");
@@ -96,7 +101,8 @@ const Builder: React.FC = () => {
             id: currentQuestionnaireId ?? undefined,
             name,
             paperSize,
-            questions
+            questions,
+            header: headerConfig
           });
           setCurrentQuestionnaireId(record.id);
           message.success("已保存，正在前往预览");
@@ -188,6 +194,7 @@ const Builder: React.FC = () => {
           setPaperTitle(draft.name);
           setPaperSize(draft.paperSize);
           setQuestions(draft.questions);
+          setHeaderConfig(normalizeQuestionnaireHeader(draft.header));
           setActiveQuestionId(draft.questions[0]?.id ?? null);
         } else {
           message.warning("未找到指定的问卷，已为你创建新问卷");
@@ -195,6 +202,7 @@ const Builder: React.FC = () => {
           setPaperTitle("未命名问卷");
           setPaperSize("A4");
           setQuestions([]);
+          setHeaderConfig(normalizeQuestionnaireHeader(undefined));
           setActiveQuestionId(null);
         }
       } else {
@@ -202,6 +210,7 @@ const Builder: React.FC = () => {
         setPaperTitle("未命名问卷");
         setPaperSize("A4");
         setQuestions([]);
+        setHeaderConfig(normalizeQuestionnaireHeader(undefined));
         setActiveQuestionId(null);
       }
       setLoading(false);
@@ -350,6 +359,8 @@ const Builder: React.FC = () => {
                 paperSize={paperSize}
                 activeSize={activeSize}
                 questions={questions}
+                headerTitle={paperTitle}
+                headerConfig={headerConfig}
                 sensors={sensors}
                 activeQuestionId={activeQuestionId}
                 activeDragId={activeDragId}
@@ -362,6 +373,9 @@ const Builder: React.FC = () => {
           </Content>
 
           <Sider width={280} className="panel panel-right builder-sider-right" theme="light">
+            <div className="panel-title">问卷设置</div>
+            <QuestionnaireHeaderEditor header={headerConfig} onHeaderChange={setHeaderConfig} />
+            <div style={{ height: 1, background: "#e5e7eb", margin: "14px 0" }} />
             <div className="panel-title">题目设置</div>
             <QuestionEditor
               activeQuestion={activeQuestion}

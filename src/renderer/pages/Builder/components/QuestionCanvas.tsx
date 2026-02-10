@@ -1,16 +1,21 @@
+/** Builder 中间画布：负责分页、双栏排版与题目拖拽展示。 */
 import React from "react";
 import { DndContext } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent, SensorDescriptor } from "@dnd-kit/core";
 import type { QuestionDefinition, PaperSizeId } from "@renderer/type/Builder";
 import DraggableQuestion from "./DraggableQuestion";
 import QuestionPreview from "@renderer/component/QuestionPreview";
+import QuestionnaireHeader from "@renderer/component/QuestionnaireHeader";
 import type { PaperSizePreset } from "../constants";
-import { estimateQuestionHeight, getQuestionTypeLabel } from "../utils";
+import { estimateQuestionHeight, estimateQuestionnaireHeaderHeight, getQuestionTypeLabel } from "../utils";
+import type { NormalizedQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
 
 type QuestionCanvasProps = {
   questions: QuestionDefinition[];
   paperSize: PaperSizeId;
   activeSize: PaperSizePreset;
+  headerTitle: string;
+  headerConfig: NormalizedQuestionnaireHeader;
   sensors: SensorDescriptor<any>[];
   activeQuestionId: string | null;
   activeDragId: string | null;
@@ -24,6 +29,8 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
   questions,
   paperSize,
   activeSize,
+  headerTitle,
+  headerConfig,
   sensors,
   activeQuestionId,
   activeDragId,
@@ -36,13 +43,17 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
   const usableHeight = Math.max(activeSize.height - 48 - 32 - 40, 200);
 
   const pages = React.useMemo(() => {
-    const createEmptyPage = () => ({
+    const displayTitle = headerConfig.title.trim() ? headerConfig.title : headerTitle;
+    const headerHeight = estimateQuestionnaireHeaderHeight(displayTitle, headerConfig);
+
+    const createEmptyPage = (maxHeight: number) => ({
       columns: Array.from({ length: columnCount }, () => [] as QuestionDefinition[]),
-      heights: Array(columnCount).fill(0)
+      heights: Array(columnCount).fill(0),
+      maxHeight
     });
 
-    const nextPages: { columns: QuestionDefinition[][]; heights: number[] }[] = [];
-    let currentPage = createEmptyPage();
+    const nextPages: { columns: QuestionDefinition[][]; heights: number[]; maxHeight: number }[] = [];
+    let currentPage = createEmptyPage(Math.max(usableHeight - headerHeight, 120));
     nextPages.push(currentPage);
     let columnIndex = 0;
 
@@ -51,7 +62,7 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
 
       for (;;) {
         const currentHeight = currentPage.heights[columnIndex];
-        const canFit = currentHeight + height <= usableHeight || currentHeight === 0;
+        const canFit = currentHeight + height <= currentPage.maxHeight || currentHeight === 0;
 
         if (canFit) {
           currentPage.columns[columnIndex].push(q);
@@ -64,16 +75,17 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
           continue;
         }
 
-        currentPage = createEmptyPage();
+        currentPage = createEmptyPage(usableHeight);
         nextPages.push(currentPage);
         columnIndex = 0;
       }
     }
 
     return nextPages;
-  }, [columnCount, questions, usableHeight]);
+  }, [columnCount, headerConfig, headerTitle, questions, usableHeight]);
 
   let globalQuestionIndex = 0;
+  const displayTitle = headerConfig.title.trim() ? headerConfig.title : headerTitle;
 
   return (
     <div className="builder-canvas-wrapper">
@@ -91,10 +103,25 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
             <div className="builder-canvas-size-label">
               {activeSize.label} · {activeSize.description} · 第 {pageIndex + 1} 页
             </div>
+            {pageIndex === 0 && (
+              <div className="builder-paper-header">
+                <QuestionnaireHeader
+                  title={displayTitle}
+                  subtitle={headerConfig.subtitle}
+                  titleStyle={headerConfig.titleStyle}
+                  subtitleStyle={headerConfig.subtitleStyle}
+                />
+              </div>
+            )}
+
             {questions.length === 0 && pageIndex === 0 ? (
-              <div className="builder-canvas-placeholder">从左侧选择题型，点击即可添加到试卷中</div>
+              <div className="builder-canvas-empty">从左侧选择题型，点击即可添加到试卷中</div>
             ) : columnCount === 1 ? (
-              <div className="builder-question-list">
+              <div
+                className={
+                  pageIndex === 0 ? "builder-question-list builder-question-list--after-header" : "builder-question-list"
+                }
+              >
                 {page.columns[0].map((q) => {
                   const globalIndex = globalQuestionIndex++;
                   const label = `第 ${globalIndex + 1} 题 · ${getQuestionTypeLabel(q.type)} · ${
@@ -114,12 +141,18 @@ const QuestionCanvas: React.FC<QuestionCanvasProps> = ({
                 })}
               </div>
             ) : (
-              <div className="builder-double">
+              <div className={pageIndex === 0 ? "builder-double builder-double--after-header" : "builder-double"}>
                 {page.columns.map((col, colIndex) => (
                   <React.Fragment key={colIndex}>
                     {colIndex === 1 && <div className="builder-double-divider" />}
                     <div className="builder-double-column">
-                      <div className="builder-question-list">
+                      <div
+                        className={
+                          pageIndex === 0
+                            ? "builder-question-list builder-question-list--after-header"
+                            : "builder-question-list"
+                        }
+                      >
                         {col.map((q) => {
                           const globalIndex = globalQuestionIndex++;
                           const label = `第 ${globalIndex + 1} 题 · ${getQuestionTypeLabel(q.type)} · ${

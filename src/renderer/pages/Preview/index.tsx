@@ -1,13 +1,15 @@
+/** 问卷预览页：加载本地问卷并展示排版效果。 */
 import React from "react";
-import { Layout, Button, Spin, Empty, Tag, Space, message } from "antd";
+import { Layout, Button, Spin, Empty, Space, message } from "antd";
 import { LeftOutlined, EditOutlined, ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PaperHeader from "../../component/PaperHeader";
 import PaperFooter from "../../component/PaperFooter";
 import QuestionPreview from "@renderer/component/QuestionPreview";
+import QuestionnaireHeader from "@renderer/component/QuestionnaireHeader";
 import { getQuestionnaire, getLatestQuestionnaire, type QuestionnaireRecord } from "@renderer/db";
 import { PAPER_SIZE_PRESETS } from "../Builder/constants";
-import { getQuestionTypeLabel } from "../Builder/utils";
+import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
 import "./index.css";
 
 const { Content } = Layout;
@@ -49,6 +51,9 @@ const PreviewPage: React.FC = () => {
   }, [loadQuestionnaire]);
 
   const paperSize = questionnaire ? PAPER_SIZE_PRESETS[questionnaire.paperSize] : null;
+  const headerConfig = questionnaire ? normalizeQuestionnaireHeader(questionnaire.header) : null;
+  const displayTitle =
+    questionnaire && headerConfig && headerConfig.title.trim() ? headerConfig.title : questionnaire?.name ?? "未命名问卷";
 
   const handleExportPdf = React.useCallback(async () => {
     if (!questionnaire) return;
@@ -56,7 +61,9 @@ const PreviewPage: React.FC = () => {
     const api = window.paperEasyAPI ?? window.electron;
     const exportFn = api?.exportPreviewPdf;
 
-    const suggestedFileName = questionnaire.name || "试卷";
+    const header = normalizeQuestionnaireHeader(questionnaire.header);
+    const titleForFileName = header.title.trim() ? header.title : questionnaire.name;
+    const suggestedFileName = titleForFileName.trim() || "试卷";
     const normalizedPaperSize =
       questionnaire.paperSize === "A5" ? "A5" : questionnaire.paperSize === "Letter" ? "Letter" : "A4";
 
@@ -79,7 +86,15 @@ const PreviewPage: React.FC = () => {
       }
     } catch (error) {
       const err = error as Error;
-      message.error(err.message || "导出 PDF 失败，请重试。");
+      const msg = err?.message || "";
+
+      if (msg.includes("No handler registered") && msg.includes("paperEasy:exportPreviewPdf")) {
+        message.info("导出服务未就绪，将打开打印对话框。");
+        window.print();
+        return;
+      }
+
+      message.error(msg || "导出 PDF 失败，请重试。");
     } finally {
       setExportingPdf(false);
     }
@@ -135,35 +150,22 @@ const PreviewPage: React.FC = () => {
               }}
             >
               <div className="preview-paper-header">
-                <div>
-                  <div className="preview-title">{questionnaire.name}</div>
-                  <div className="preview-meta">
-                    {paperSize && (
-                      <span>
-                        纸张：{paperSize.label}（{paperSize.description}）
-                      </span>
-                    )}
-                    <span>题目数：{questionnaire.questions.length}</span>
-                  </div>
-                </div>
-                <div className="preview-updated">
-                  最近更新：{new Date(questionnaire.updatedAt).toLocaleString()}
-                </div>
+                {headerConfig && (
+                  <QuestionnaireHeader
+                    title={displayTitle}
+                    subtitle={headerConfig.subtitle}
+                    titleStyle={headerConfig.titleStyle}
+                    subtitleStyle={headerConfig.subtitleStyle}
+                  />
+                )}
               </div>
 
               <div className="preview-question-list">
                 {questionnaire.questions.length === 0 ? (
                   <Empty description="问卷暂无题目" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : (
-                  questionnaire.questions.map((q, index) => (
+                  questionnaire.questions.map((q) => (
                     <div key={q.id} className="preview-question-card">
-                      <div className="preview-question-header">
-                        <div className="preview-question-label">
-                          <span className="preview-question-index">第 {index + 1} 题</span>
-                          <span className="preview-question-type">{getQuestionTypeLabel(q.type)}</span>
-                        </div>
-                        {q.required && <Tag color="red">必答</Tag>}
-                      </div>
                       <QuestionPreview question={q} disabled={false} />
                     </div>
                   ))

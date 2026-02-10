@@ -1,4 +1,6 @@
+/** Builder 相关工具函数：标签与排版高度估算等。 */
 import type { QuestionDefinition, QuestionType } from "@renderer/type/Builder";
+import type { NormalizedQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
 
 export const getQuestionTypeLabel = (type: QuestionType): string => {
   switch (type) {
@@ -60,4 +62,29 @@ export const estimateQuestionHeight = (q: QuestionDefinition): number => {
     height += 60;
   }
   return height + 12;
+};
+
+export const estimateQuestionnaireHeaderHeight = (
+  displayTitle: string,
+  header: NormalizedQuestionnaireHeader
+): number => {
+  const safeTitle = displayTitle.trim() || "未命名问卷";
+  const safeSubtitle = (header.subtitle ?? "").trim();
+
+  const lineHeight = (fontSize: number) => Math.ceil(fontSize * 1.35);
+
+  let height = 0;
+  height += lineHeight(header.titleStyle.fontSize);
+  height += 10;
+
+  if (safeSubtitle) {
+    height += lineHeight(header.subtitleStyle.fontSize);
+    height += 8;
+  }
+
+  if (safeTitle.length > 18) {
+    height += Math.ceil(lineHeight(header.titleStyle.fontSize) * 0.35);
+  }
+
+  return Math.max(height, 48);
 };
