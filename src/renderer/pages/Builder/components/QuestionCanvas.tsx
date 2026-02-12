@@ -16,6 +16,8 @@ type QuestionCanvasProps = {
   activeSize: PaperSizePreset;
   headerTitle: string;
   headerConfig: NormalizedQuestionnaireHeader;
+  // dnd-kit 的类型定义中 sensors 使用了 SensorDescriptor<any>[]，此处保持一致。
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sensors: SensorDescriptor<any>[];
   activeQuestionId: string | null;
   activeDragId: string | null;

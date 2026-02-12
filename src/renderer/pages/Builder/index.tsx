@@ -224,14 +224,18 @@ const Builder: React.FC = () => {
 
   React.useEffect(() => {
     let mounted = true;
-    loadTemplates().then((tpls) => {
+    const run = async () => {
+      const tpls = await loadTemplates();
       if (!mounted) return;
       setTemplates(tpls);
-      if (!activeTemplateId && tpls[0]) {
-        setActiveTemplateId(tpls[0].id);
+      setActiveTemplateId((current) => {
+        if (current || !tpls[0]) return current;
         setActiveCategoryId(tpls[0].categoryId);
-      }
-    });
+        return tpls[0].id;
+      });
+    };
+
+    void run();
 
     return () => {
       mounted = false;

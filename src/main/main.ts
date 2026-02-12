@@ -37,29 +37,44 @@ function registerIpcHandlers() {
         throw new Error("无法获取窗口实例，导出 PDF 失败。");
       }
 
-      const baseName = sanitizeFilename(options.suggestedFileName ?? "试卷");
-      const fileName = baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
-      const defaultPath = path.join(app.getPath("downloads"), fileName);
+      try {
+        const baseName = sanitizeFilename(options.suggestedFileName ?? "试卷");
+        const fileName = baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
+        const defaultPath = path.join(app.getPath("downloads"), fileName);
 
-      const saveResult = await dialog.showSaveDialog(targetWindow, {
-        title: "导出试卷为 PDF",
-        defaultPath,
-        filters: [{ name: "PDF", extensions: ["pdf"] }]
-      });
+        const saveResult = await dialog.showSaveDialog(targetWindow, {
+          title: "导出试卷为 PDF",
+          defaultPath,
+          filters: [{ name: "PDF", extensions: ["pdf"] }]
+        });
 
-      if (saveResult.canceled || !saveResult.filePath) {
+        if (saveResult.canceled || !saveResult.filePath) {
+          return { canceled: true };
+        }
+
+        const pdfData = await targetWindow.webContents.printToPDF({
+          printBackground: true,
+          preferCSSPageSize: true,
+          pageSize: options.pageSize ?? "A4",
+          landscape: Boolean(options.landscape)
+        });
+
+        await fs.writeFile(saveResult.filePath, pdfData);
+        return { canceled: false, filePath: saveResult.filePath };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        try {
+          await dialog.showMessageBox(targetWindow, {
+            type: "error",
+            title: "导出失败",
+            message: "导出 PDF 失败，请重试。",
+            detail
+          });
+        } catch {
+          // ignore
+        }
         return { canceled: true };
       }
-
-      const pdfData = await targetWindow.webContents.printToPDF({
-        printBackground: true,
-        preferCSSPageSize: true,
-        pageSize: options.pageSize ?? "A4",
-        landscape: Boolean(options.landscape)
-      });
-
-      await fs.writeFile(saveResult.filePath, pdfData);
-      return { canceled: false, filePath: saveResult.filePath };
     }
   );
 }
