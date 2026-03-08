@@ -25,15 +25,17 @@ function openGithub() {
   const url = "https://github.com/Ruzenie/PaperEasyBuild";
   try {
     const anyWindow = window as unknown as {
-      electron?: { shell?: { openExternal?: (url: string) => void } };
-      paperEasyAPI?: { shell?: { openExternal?: (url: string) => void } };
+      electron?: { shell?: { openExternal?: (url: string) => Promise<void> } };
+      paperEasyAPI?: { shell?: { openExternal?: (url: string) => Promise<void> } };
       open: (url: string, target?: string, features?: string) => Window | null;
     };
 
     const api = anyWindow.electron ?? anyWindow.paperEasyAPI;
 
     if (api && api.shell && typeof api.shell.openExternal === "function") {
-      api.shell.openExternal(url);
+      void api.shell
+        .openExternal(url)
+        .catch(() => anyWindow.open(url, "_blank", "noopener,noreferrer"));
     } else {
       anyWindow.open(url, "_blank", "noopener,noreferrer");
     }

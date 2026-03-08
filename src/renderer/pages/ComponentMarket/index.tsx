@@ -28,6 +28,11 @@ import {
 import "./index.css";
 
 const { Content } = Layout;
+const CONFIG_SAVE_DEBOUNCE_MS = 320;
+const TEMPLATE_SAVE_DEBOUNCE_MS = 320;
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message ? error.message : fallback;
 
 const ComponentMarket: React.FC = () => {
   const navigate = useNavigate();
@@ -37,31 +42,127 @@ const ComponentMarket: React.FC = () => {
   const [activeTemplateId, setActiveTemplateId] = React.useState<string>("");
   const [configById, setConfigById] = React.useState<Record<string, TemplateConfig>>({});
   const [loading, setLoading] = React.useState(false);
+  const configSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const templateSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingConfigSavesRef = React.useRef<Record<string, TemplateConfig>>({});
+  const pendingTemplateSavesRef = React.useRef<Record<string, QuestionTemplate>>({});
+
+  const flushConfigSaves = React.useCallback(async () => {
+    const entries = Object.entries(pendingConfigSavesRef.current);
+    if (entries.length === 0) return;
+    pendingConfigSavesRef.current = {};
+
+    const results = await Promise.allSettled(entries.map(([id, config]) => saveTemplateConfig(id, config)));
+    const failedEntries = entries.filter((_, index) => results[index]?.status === "rejected");
+
+    if (failedEntries.length > 0) {
+      for (const [id, config] of failedEntries) {
+        pendingConfigSavesRef.current[id] = config;
+      }
+      message.error(`有 ${failedEntries.length} 个模板配置保存失败，系统将自动重试`);
+      if (!configSaveTimerRef.current) {
+        configSaveTimerRef.current = setTimeout(() => {
+          configSaveTimerRef.current = null;
+          void flushConfigSaves();
+        }, CONFIG_SAVE_DEBOUNCE_MS * 2);
+      }
+    }
+  }, []);
+
+  const flushTemplateSaves = React.useCallback(async () => {
+    const entries = Object.entries(pendingTemplateSavesRef.current);
+    if (entries.length === 0) return;
+    pendingTemplateSavesRef.current = {};
+
+    const results = await Promise.allSettled(entries.map(([, template]) => saveTemplate(template)));
+    const failedEntries = entries.filter((_, index) => results[index]?.status === "rejected");
+
+    if (failedEntries.length > 0) {
+      for (const [id, template] of failedEntries) {
+        pendingTemplateSavesRef.current[id] = template;
+      }
+      message.error(`有 ${failedEntries.length} 个模板元数据保存失败，系统将自动重试`);
+      if (!templateSaveTimerRef.current) {
+        templateSaveTimerRef.current = setTimeout(() => {
+          templateSaveTimerRef.current = null;
+          void flushTemplateSaves();
+        }, TEMPLATE_SAVE_DEBOUNCE_MS * 2);
+      }
+    }
+  }, []);
+
+  const scheduleConfigSave = React.useCallback(
+    (templateId: string, config: TemplateConfig) => {
+      pendingConfigSavesRef.current[templateId] = config;
+      if (configSaveTimerRef.current) {
+        clearTimeout(configSaveTimerRef.current);
+      }
+      configSaveTimerRef.current = setTimeout(() => {
+        configSaveTimerRef.current = null;
+        void flushConfigSaves();
+      }, CONFIG_SAVE_DEBOUNCE_MS);
+    },
+    [flushConfigSaves]
+  );
+
+  const scheduleTemplateSave = React.useCallback(
+    (template: QuestionTemplate) => {
+      pendingTemplateSavesRef.current[template.id] = template;
+      if (templateSaveTimerRef.current) {
+        clearTimeout(templateSaveTimerRef.current);
+      }
+      templateSaveTimerRef.current = setTimeout(() => {
+        templateSaveTimerRef.current = null;
+        void flushTemplateSaves();
+      }, TEMPLATE_SAVE_DEBOUNCE_MS);
+    },
+    [flushTemplateSaves]
+  );
 
   React.useEffect(() => {
     let mounted = true;
     const bootstrap = async () => {
-      setLoading(true);
-      const [tpls, configs] = await Promise.all([loadTemplates(), loadTemplateConfigs()]);
-      if (!mounted) return;
-
-      const configMap: Record<string, TemplateConfig> = {};
-      for (const tpl of tpls) {
-        configMap[tpl.id] = configs[tpl.id] ?? buildDefaultConfigFromTemplate(tpl);
+      if (mounted) {
+        setLoading(true);
       }
+      try {
+        const [tpls, configs] = await Promise.all([loadTemplates(), loadTemplateConfigs()]);
+        if (!mounted) return;
 
-      setTemplates(tpls);
-      setConfigById(configMap);
-      setActiveTemplateId((prev) => prev || tpls[0]?.id || "");
-      setActiveCategoryId((prev) => prev || tpls[0]?.categoryId || "choice");
-      setLoading(false);
+        const configMap: Record<string, TemplateConfig> = {};
+        for (const tpl of tpls) {
+          configMap[tpl.id] = configs[tpl.id] ?? buildDefaultConfigFromTemplate(tpl);
+        }
+
+        setTemplates(tpls);
+        setConfigById(configMap);
+        setActiveTemplateId((prev) => prev || tpls[0]?.id || "");
+        setActiveCategoryId((prev) => prev || tpls[0]?.categoryId || "choice");
+      } catch (error) {
+        if (!mounted) return;
+        message.error(getErrorMessage(error, "加载组件市场失败，请刷新重试"));
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    bootstrap();
+    void bootstrap();
     return () => {
       mounted = false;
+      if (configSaveTimerRef.current) {
+        clearTimeout(configSaveTimerRef.current);
+        configSaveTimerRef.current = null;
+      }
+      if (templateSaveTimerRef.current) {
+        clearTimeout(templateSaveTimerRef.current);
+        templateSaveTimerRef.current = null;
+      }
+      void flushConfigSaves();
+      void flushTemplateSaves();
     };
-  }, []);
+  }, [flushConfigSaves, flushTemplateSaves]);
 
   const activeTemplates = React.useMemo(
     () => templates.filter((t) => t.categoryId === activeCategoryId),
@@ -77,20 +178,27 @@ const ComponentMarket: React.FC = () => {
 
   const handleConfigChange = (patch: Partial<TemplateConfig>) => {
     if (!activeTemplate) return;
-    setConfigById((prev) => ({
-      ...prev,
-      [activeTemplate.id]: {
-        ...activeConfig,
-        ...patch
-      }
-    }));
-    saveTemplateConfig(activeTemplate.id, { ...activeConfig, ...patch });
+    setConfigById((prev) => {
+      const current = prev[activeTemplate.id] ?? buildDefaultConfigFromTemplate(activeTemplate);
+      const nextConfig = { ...current, ...patch };
+      scheduleConfigSave(activeTemplate.id, nextConfig);
+      return {
+        ...prev,
+        [activeTemplate.id]: nextConfig
+      };
+    });
   };
 
   const handleTemplateMetaChange = (patch: Partial<QuestionTemplate>) => {
     if (!activeTemplate) return;
-    setTemplates((prev) => prev.map((t) => (t.id === activeTemplate.id ? { ...t, ...patch } : t)));
-    saveTemplate({ ...activeTemplate, ...patch });
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTemplate.id) return t;
+        const nextTemplate = { ...t, ...patch };
+        scheduleTemplateSave(nextTemplate);
+        return nextTemplate;
+      })
+    );
   };
 
   const handleCreateTemplateFromCurrent = async () => {
@@ -109,17 +217,22 @@ const ComponentMarket: React.FC = () => {
       defaultOptions: [...activeConfig.options]
     };
 
-    setTemplates((prev) => [...prev, newTemplate]);
-    setConfigById((prev) => ({
-      ...prev,
-      [newId]: {
-        ...activeConfig
-      }
-    }));
-    setActiveTemplateId(newId);
-    setActiveCategoryId(newTemplate.categoryId);
-    await saveTemplate(newTemplate);
-    await saveTemplateConfig(newId, { ...activeConfig });
+    try {
+      await saveTemplate(newTemplate);
+      await saveTemplateConfig(newId, { ...activeConfig });
+      setTemplates((prev) => [...prev, newTemplate]);
+      setConfigById((prev) => ({
+        ...prev,
+        [newId]: {
+          ...activeConfig
+        }
+      }));
+      setActiveTemplateId(newId);
+      setActiveCategoryId(newTemplate.categoryId);
+      message.success("已创建题型模板副本");
+    } catch (error) {
+      message.error(getErrorMessage(error, "创建题型模板失败，请稍后重试"));
+    }
   };
 
   const handleDeleteCurrentTemplate = async () => {
@@ -130,16 +243,20 @@ const ComponentMarket: React.FC = () => {
     }
     try {
       await deleteTemplate(activeTemplate.id);
-      setTemplates((prev) => prev.filter((t) => t.id !== activeTemplate.id));
+      const nextTemplates = templates.filter((t) => t.id !== activeTemplate.id);
+      setTemplates(nextTemplates);
       setConfigById((prev) => {
         const next = { ...prev };
         delete next[activeTemplate.id];
         return next;
       });
+      delete pendingConfigSavesRef.current[activeTemplate.id];
+      delete pendingTemplateSavesRef.current[activeTemplate.id];
 
-      const nextTemplate = templates.find((t) => t.id !== activeTemplate.id);
+      const nextTemplate =
+        nextTemplates.find((t) => t.categoryId === activeCategoryId) ?? nextTemplates[0];
       setActiveTemplateId(nextTemplate?.id ?? "");
-      setActiveCategoryId(nextTemplate?.categoryId ?? activeCategoryId);
+      setActiveCategoryId(nextTemplate?.categoryId ?? "choice");
       message.success("已删除该题型");
     } catch (err) {
       message.error(err instanceof Error ? err.message : "删除失败");

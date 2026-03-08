@@ -26,6 +26,9 @@ import "./index.css";
 
 const { Content, Sider } = Layout;
 
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 const Builder: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -50,6 +53,15 @@ const Builder: React.FC = () => {
     })
   );
 
+  const resetBuilderDraft = React.useCallback(() => {
+    setCurrentQuestionnaireId(null);
+    setPaperTitle("未命名问卷");
+    setPaperSize("A4");
+    setQuestions([]);
+    setHeaderConfig(normalizeQuestionnaireHeader(undefined));
+    setActiveQuestionId(null);
+  }, []);
+
   const handleSave = async () => {
     const name = paperTitle.trim();
     if (!name) {
@@ -71,6 +83,8 @@ const Builder: React.FC = () => {
       });
       setCurrentQuestionnaireId(record.id);
       message.success("问卷已保存到本地");
+    } catch (error) {
+      message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
     } finally {
       setSaving(false);
     }
@@ -107,6 +121,8 @@ const Builder: React.FC = () => {
           setCurrentQuestionnaireId(record.id);
           message.success("已保存，正在前往预览");
           navigate(`/preview?id=${record.id}`);
+        } catch (error) {
+          message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
         } finally {
           setSaving(false);
         }
@@ -183,56 +199,62 @@ const Builder: React.FC = () => {
   React.useEffect(() => {
     let mounted = true;
     const loadDraft = async () => {
-      setLoading(true);
-      const targetId = searchParams.get("id");
-
-      if (targetId) {
-        const draft = await getQuestionnaire(targetId);
-        if (!mounted) return;
-        if (draft) {
-          setCurrentQuestionnaireId(draft.id);
-          setPaperTitle(draft.name);
-          setPaperSize(draft.paperSize);
-          setQuestions(draft.questions);
-          setHeaderConfig(normalizeQuestionnaireHeader(draft.header));
-          setActiveQuestionId(draft.questions[0]?.id ?? null);
-        } else {
-          message.warning("未找到指定的问卷，已为你创建新问卷");
-          setCurrentQuestionnaireId(null);
-          setPaperTitle("未命名问卷");
-          setPaperSize("A4");
-          setQuestions([]);
-          setHeaderConfig(normalizeQuestionnaireHeader(undefined));
-          setActiveQuestionId(null);
-        }
-      } else {
-        setCurrentQuestionnaireId(null);
-        setPaperTitle("未命名问卷");
-        setPaperSize("A4");
-        setQuestions([]);
-        setHeaderConfig(normalizeQuestionnaireHeader(undefined));
-        setActiveQuestionId(null);
+      if (mounted) {
+        setLoading(true);
       }
-      setLoading(false);
+      try {
+        const targetId = searchParams.get("id");
+
+        if (targetId) {
+          const draft = await getQuestionnaire(targetId);
+          if (!mounted) return;
+          if (draft) {
+            setCurrentQuestionnaireId(draft.id);
+            setPaperTitle(draft.name);
+            setPaperSize(draft.paperSize);
+            setQuestions(draft.questions);
+            setHeaderConfig(normalizeQuestionnaireHeader(draft.header));
+            setActiveQuestionId(draft.questions[0]?.id ?? null);
+          } else {
+            message.warning("未找到指定的问卷，已为你创建新问卷");
+            resetBuilderDraft();
+          }
+        } else {
+          resetBuilderDraft();
+        }
+      } catch (error) {
+        if (!mounted) return;
+        resetBuilderDraft();
+        message.error(getErrorMessage(error, "加载问卷失败，已创建空白问卷"));
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    loadDraft();
+    void loadDraft();
     return () => {
       mounted = false;
     };
-  }, [searchParams]);
+  }, [resetBuilderDraft, searchParams]);
 
   React.useEffect(() => {
     let mounted = true;
     const run = async () => {
-      const tpls = await loadTemplates();
-      if (!mounted) return;
-      setTemplates(tpls);
-      setActiveTemplateId((current) => {
-        if (current || !tpls[0]) return current;
-        setActiveCategoryId(tpls[0].categoryId);
-        return tpls[0].id;
-      });
+      try {
+        const tpls = await loadTemplates();
+        if (!mounted) return;
+        setTemplates(tpls);
+        setActiveTemplateId((current) => {
+          if (current || !tpls[0]) return current;
+          setActiveCategoryId(tpls[0].categoryId);
+          return tpls[0].id;
+        });
+      } catch (error) {
+        if (!mounted) return;
+        message.error(getErrorMessage(error, "加载题型模板失败，请刷新重试"));
+      }
     };
 
     void run();

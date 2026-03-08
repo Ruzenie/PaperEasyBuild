@@ -17,8 +17,33 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, "dist/renderer"),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@ant-design/icons")) {
+            return "vendor-ant-icons";
+          }
+          if (id.includes("rc-")) {
+            return "vendor-ant-rc";
+          }
+          if (id.includes("antd")) {
+            return "vendor-antd";
+          }
+          if (id.includes("react-router")) {
+            return "vendor-router";
+          }
+          if (id.includes("@dnd-kit")) {
+            return "vendor-dnd";
+          }
+          if (id.includes("react") || id.includes("scheduler")) {
+            return "vendor-react";
+          }
+          return "vendor";
+        }
+      }
+    }
   },
   base: "./"
 });
-

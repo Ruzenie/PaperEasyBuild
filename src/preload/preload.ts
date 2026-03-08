@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, shell } from "electron";
+import { isSafeExternalUrl } from "./security";
 
 type ExportPreviewPdfOptions = {
   suggestedFileName?: string;
@@ -18,7 +19,7 @@ type ExportPreviewPdfResult =
 type PaperEasyAPI = {
   ping: () => string;
   shell: {
-    openExternal: (url: string) => void;
+    openExternal: (url: string) => Promise<void>;
   };
   exportPreviewPdf: (options?: ExportPreviewPdfOptions) => Promise<ExportPreviewPdfResult>;
 };
@@ -26,8 +27,11 @@ type PaperEasyAPI = {
 const api: PaperEasyAPI = {
   ping: () => "pong",
   shell: {
-    openExternal: (url: string) => {
-      void shell.openExternal(url);
+    openExternal: async (url: string) => {
+      if (!isSafeExternalUrl(url)) {
+        throw new Error("不支持的外链协议，已阻止打开。");
+      }
+      await shell.openExternal(url);
     }
   },
   exportPreviewPdf: (options) => ipcRenderer.invoke("paperEasy:exportPreviewPdf", options)
