@@ -1,6 +1,11 @@
 /** Dexie（IndexedDB）数据访问层。 */
 import Dexie, { type Table } from "dexie";
-import type { QuestionDefinition, PaperSizeId, QuestionnaireHeaderConfig } from "@renderer/type/Builder";
+import type {
+  QuestionAnswerValue,
+  QuestionDefinition,
+  PaperSizeId,
+  QuestionnaireHeaderConfig
+} from "@renderer/type/Builder";
 import type { QuestionTemplate, TemplateConfig } from "@renderer/type/ComponentMarket";
 import { BASE_QUESTION_TEMPLATES, BASE_TEMPLATE_IDS } from "@renderer/config/questionTemplates";
 import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
@@ -25,10 +30,29 @@ export interface QuestionnaireRecord {
   updatedAt: number;
 }
 
+export interface SubmissionQuestionSnapshot {
+  id: string;
+  title: string;
+  type: QuestionDefinition["type"];
+  required?: boolean;
+}
+
+export interface SubmissionRecord {
+  id: string;
+  questionnaireId: string;
+  questionnaireName: string;
+  answers: Record<string, QuestionAnswerValue>;
+  questionSnapshot: SubmissionQuestionSnapshot[];
+  totalQuestions: number;
+  answeredQuestions: number;
+  createdAt: number;
+}
+
 class PaperEasyDB extends Dexie {
   templates!: Table<StoredTemplate, string>;
   templateConfigs!: Table<StoredTemplateConfig, string>;
   questionnaires!: Table<QuestionnaireRecord, string>;
+  submissions!: Table<SubmissionRecord, string>;
 
   constructor() {
     super("PaperEasyDB");
@@ -36,6 +60,12 @@ class PaperEasyDB extends Dexie {
       templates: "&id, updatedAt",
       templateConfigs: "&id",
       questionnaires: "&id, updatedAt"
+    });
+    this.version(2).stores({
+      templates: "&id, updatedAt",
+      templateConfigs: "&id",
+      questionnaires: "&id, updatedAt",
+      submissions: "&id, questionnaireId, createdAt, [questionnaireId+createdAt]"
     });
   }
 }
@@ -197,4 +227,39 @@ export const getLatestQuestionnaire = async (): Promise<QuestionnaireRecord | un
 
 export const deleteQuestionnaire = async (id: string) => {
   await db.questionnaires.delete(id);
+};
+
+export interface SaveSubmissionPayload {
+  questionnaireId: string;
+  questionnaireName: string;
+  answers: Record<string, QuestionAnswerValue>;
+  questionSnapshot: SubmissionQuestionSnapshot[];
+  totalQuestions: number;
+  answeredQuestions: number;
+}
+
+export const saveSubmission = async (payload: SaveSubmissionPayload): Promise<SubmissionRecord> => {
+  const now = Date.now();
+  const id = `sub_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+  const record: SubmissionRecord = {
+    id,
+    questionnaireId: payload.questionnaireId,
+    questionnaireName: payload.questionnaireName || "未命名问卷",
+    answers: payload.answers,
+    questionSnapshot: payload.questionSnapshot,
+    totalQuestions: payload.totalQuestions,
+    answeredQuestions: payload.answeredQuestions,
+    createdAt: now
+  };
+  await db.submissions.put(record);
+  return record;
+};
+
+export const listSubmissions = async (questionnaireId?: string): Promise<SubmissionRecord[]> => {
+  if (!questionnaireId) {
+    return db.submissions.orderBy("createdAt").reverse().toArray();
+  }
+
+  const records = await db.submissions.where("questionnaireId").equals(questionnaireId).toArray();
+  return records.sort((a, b) => b.createdAt - a.createdAt);
 };

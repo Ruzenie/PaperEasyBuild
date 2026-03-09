@@ -6,7 +6,8 @@ import {
   EyeOutlined,
   DeleteOutlined,
   PlusOutlined,
-  CompassOutlined
+  CompassOutlined,
+  FileSearchOutlined
 } from "@ant-design/icons";
 import PaperHeader from "@renderer/component/PaperHeader";
 import PaperFooter from "@renderer/component/PaperFooter";
@@ -136,6 +137,9 @@ const Home: React.FC = () => {
             }}
           >
             组件市场
+          </Button>
+          <Button icon={<FileSearchOutlined />} onClick={() => navigate("/submissions")}>
+            提交记录
           </Button>
         </div>
 

@@ -6,6 +6,7 @@ const BuilderPage = React.lazy(() => import("../pages/Builder"));
 const PreviewPage = React.lazy(() => import("../pages/Preview"));
 const Home = React.lazy(() => import("../pages/Home"));
 const ComponentMarket = React.lazy(() => import("../pages/ComponentMarket"));
+const SubmissionsPage = React.lazy(() => import("../pages/Submissions"));
 
 const RootLayout: React.FC = () => {
   return <Outlet />;
@@ -57,6 +58,14 @@ export const router = createHashRouter([
         element: (
           <SuspensePage>
             <ComponentMarket />
+          </SuspensePage>
+        )
+      },
+      {
+        path: "submissions",
+        element: (
+          <SuspensePage>
+            <SubmissionsPage />
           </SuspensePage>
         )
       },

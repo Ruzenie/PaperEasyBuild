@@ -21,3 +21,6 @@ export interface QuestionDefinition {
   options?: string[];
 }
 export type PaperSizeId = "A4" | "A5" | "Letter" | "ExamSingle" | "ExamDouble";
+
+export type QuestionAnswerValue = string | string[] | null;
+export type QuestionnaireAnswers = Record<string, QuestionAnswerValue>;
