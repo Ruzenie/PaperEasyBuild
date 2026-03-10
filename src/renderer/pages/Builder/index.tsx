@@ -15,6 +15,7 @@ import type { PaperSizeId, QuestionDefinition, QuestionType } from "@renderer/ty
 import type { QuestionCategoryId, QuestionTemplate } from "@renderer/type/ComponentMarket";
 import { QUESTION_CATEGORIES } from "@renderer/config/questionTemplates";
 import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
+import { clearVisibilityRulesForSource } from "../../utils/questionLogic";
 import {
   DEFAULT_DESCRIPTION_STYLE,
   DEFAULT_OPTION_STYLE,
@@ -163,11 +164,35 @@ const Builder: React.FC = () => {
   };
 
   const handleQuestionChange = (id: string, patch: Partial<QuestionDefinition>) => {
-    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+    setQuestions((prev) => {
+      const next = prev.map((question) => (question.id === id ? { ...question, ...patch } : question));
+
+      if (!Object.prototype.hasOwnProperty.call(patch, "options")) {
+        return next;
+      }
+
+      const changedQuestion = next.find((question) => question.id === id);
+      const validOptions = changedQuestion?.options ?? [];
+
+      return next.map((question) => {
+        const rule = question.visibilityRule;
+        if (!rule || rule.sourceQuestionId !== id) return question;
+        if (validOptions.includes(rule.expectedValue)) return question;
+        return {
+          ...question,
+          visibilityRule: validOptions[0]
+            ? {
+                ...rule,
+                expectedValue: validOptions[0]
+              }
+            : undefined
+        };
+      });
+    });
   };
 
   const handleRemoveQuestion = (id: string) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== id));
+    setQuestions((prev) => clearVisibilityRulesForSource(prev.filter((q) => q.id !== id), id));
     setActiveQuestionId((current) => (current === id ? null : current));
   };
 
@@ -404,6 +429,7 @@ const Builder: React.FC = () => {
             <div style={{ height: 1, background: "#e5e7eb", margin: "14px 0" }} />
             <div className="panel-title">题目设置</div>
             <QuestionEditor
+              questions={questions}
               activeQuestion={activeQuestion}
               onQuestionChange={handleQuestionChange}
               onRemoveQuestion={handleRemoveQuestion}

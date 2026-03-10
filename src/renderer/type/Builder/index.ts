@@ -9,6 +9,11 @@ export type QuestionnaireHeaderConfig = {
   subtitleStyle?: TextStyleConfig;
 };
 
+export type QuestionVisibilityRule = {
+  sourceQuestionId: string;
+  expectedValue: string;
+};
+
 export interface QuestionDefinition {
   id: string;
   title: string;
@@ -19,6 +24,7 @@ export interface QuestionDefinition {
   descriptionStyle?: TextStyleConfig;
   optionStyle?: TextStyleConfig;
   options?: string[];
+  visibilityRule?: QuestionVisibilityRule;
 }
 export type PaperSizeId = "A4" | "A5" | "Letter" | "ExamSingle" | "ExamDouble";
 

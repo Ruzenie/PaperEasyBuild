@@ -1,4 +1,5 @@
 import type { QuestionAnswerValue, QuestionDefinition, QuestionnaireAnswers } from "@renderer/type/Builder";
+import { getVisibleQuestions } from "../../utils/questionLogic";
 
 export const isAnswerEmpty = (answer: QuestionAnswerValue | undefined): boolean => {
   if (answer == null) return true;
@@ -21,6 +22,11 @@ export const getMissingRequiredQuestions = (
   answers: QuestionnaireAnswers
 ): QuestionDefinition[] =>
   questions.filter((question) => question.required && !isQuestionAnswered(question, answers));
+
+export const getVisibleQuestionsForPreview = (
+  questions: QuestionDefinition[],
+  answers: QuestionnaireAnswers
+): QuestionDefinition[] => getVisibleQuestions(questions, answers);
 
 export const countAnswerableQuestions = (questions: QuestionDefinition[]): number =>
   questions.filter(isAnswerableQuestion).length;

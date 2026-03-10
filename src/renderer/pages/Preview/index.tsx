@@ -26,7 +26,8 @@ import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHead
 import {
   countAnswerableQuestions,
   countAnsweredQuestions,
-  getMissingRequiredQuestions
+  getMissingRequiredQuestions,
+  getVisibleQuestionsForPreview
 } from "./utils";
 import "./index.css";
 
@@ -72,18 +73,24 @@ const PreviewPage: React.FC = () => {
   }, [loadQuestionnaire]);
 
   const paperSize = questionnaire ? PAPER_SIZE_PRESETS[questionnaire.paperSize] : null;
+  const allQuestions = React.useMemo(() => questionnaire?.questions ?? [], [questionnaire]);
   const headerConfig = questionnaire ? normalizeQuestionnaireHeader(questionnaire.header) : null;
   const displayTitle =
     questionnaire && headerConfig && headerConfig.title.trim() ? headerConfig.title : questionnaire?.name ?? "未命名问卷";
 
+  const visibleQuestions = React.useMemo(
+    () => getVisibleQuestionsForPreview(allQuestions, answers),
+    [allQuestions, answers]
+  );
+
   const answerableCount = React.useMemo(
-    () => (questionnaire ? countAnswerableQuestions(questionnaire.questions) : 0),
-    [questionnaire]
+    () => countAnswerableQuestions(visibleQuestions),
+    [visibleQuestions]
   );
 
   const answeredCount = React.useMemo(
-    () => (questionnaire ? countAnsweredQuestions(questionnaire.questions, answers) : 0),
-    [questionnaire, answers]
+    () => countAnsweredQuestions(visibleQuestions, answers),
+    [visibleQuestions, answers]
   );
 
   const handleAnswerChange = React.useCallback((questionId: string, nextValue: QuestionAnswerValue) => {
@@ -96,7 +103,7 @@ const PreviewPage: React.FC = () => {
   const handleSubmitAnswers = React.useCallback(async () => {
     if (!questionnaire) return;
 
-    const missingRequired = getMissingRequiredQuestions(questionnaire.questions, answers);
+    const missingRequired = getMissingRequiredQuestions(visibleQuestions, answers);
     if (missingRequired.length > 0) {
       message.warning(`请先完成必答题：${missingRequired[0]?.title || "未命名题目"}`);
       return;
@@ -113,7 +120,7 @@ const PreviewPage: React.FC = () => {
         questionnaireId: questionnaire.id,
         questionnaireName: displayTitle,
         answers,
-        questionSnapshot: questionnaire.questions.map((question) => ({
+        questionSnapshot: visibleQuestions.map((question) => ({
           id: question.id,
           title: question.title,
           type: question.type,
@@ -129,7 +136,7 @@ const PreviewPage: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [answerableCount, answeredCount, answers, displayTitle, questionnaire]);
+  }, [answerableCount, answeredCount, answers, displayTitle, questionnaire, visibleQuestions]);
 
   const handleExportPdf = React.useCallback(async () => {
     if (!questionnaire) return;
@@ -261,10 +268,12 @@ const PreviewPage: React.FC = () => {
               </div>
 
               <div className="preview-question-list">
-                {questionnaire.questions.length === 0 ? (
+                {allQuestions.length === 0 ? (
                   <Empty description="问卷暂无题目" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : visibleQuestions.length === 0 ? (
+                  <Empty description="当前条件下暂无可显示题目" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : (
-                  questionnaire.questions.map((question) => (
+                  visibleQuestions.map((question) => (
                     <div key={question.id} className="preview-question-card">
                       <QuestionPreview
                         question={question}
