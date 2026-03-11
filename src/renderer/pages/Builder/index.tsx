@@ -15,6 +15,7 @@ import type { PaperSizeId, QuestionDefinition, QuestionType } from "@renderer/ty
 import type { QuestionCategoryId, QuestionTemplate } from "@renderer/type/ComponentMarket";
 import { QUESTION_CATEGORIES } from "@renderer/config/questionTemplates";
 import { normalizeQuestionnaireHeader } from "@renderer/config/questionnaireHeader";
+import { clearVisibilityRulesForSource } from "../../utils/questionLogic";
 import {
   DEFAULT_DESCRIPTION_STYLE,
   DEFAULT_OPTION_STYLE,
@@ -25,6 +26,9 @@ import { getQuestionnaire, loadTemplates, saveQuestionnaire } from "@renderer/db
 import "./index.css";
 
 const { Content, Sider } = Layout;
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message ? error.message : fallback;
 
 const Builder: React.FC = () => {
   const navigate = useNavigate();
@@ -50,6 +54,15 @@ const Builder: React.FC = () => {
     })
   );
 
+  const resetBuilderDraft = React.useCallback(() => {
+    setCurrentQuestionnaireId(null);
+    setPaperTitle("未命名问卷");
+    setPaperSize("A4");
+    setQuestions([]);
+    setHeaderConfig(normalizeQuestionnaireHeader(undefined));
+    setActiveQuestionId(null);
+  }, []);
+
   const handleSave = async () => {
     const name = paperTitle.trim();
     if (!name) {
@@ -71,6 +84,8 @@ const Builder: React.FC = () => {
       });
       setCurrentQuestionnaireId(record.id);
       message.success("问卷已保存到本地");
+    } catch (error) {
+      message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
     } finally {
       setSaving(false);
     }
@@ -107,6 +122,8 @@ const Builder: React.FC = () => {
           setCurrentQuestionnaireId(record.id);
           message.success("已保存，正在前往预览");
           navigate(`/preview?id=${record.id}`);
+        } catch (error) {
+          message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
         } finally {
           setSaving(false);
         }
@@ -147,11 +164,35 @@ const Builder: React.FC = () => {
   };
 
   const handleQuestionChange = (id: string, patch: Partial<QuestionDefinition>) => {
-    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+    setQuestions((prev) => {
+      const next = prev.map((question) => (question.id === id ? { ...question, ...patch } : question));
+
+      if (!Object.prototype.hasOwnProperty.call(patch, "options")) {
+        return next;
+      }
+
+      const changedQuestion = next.find((question) => question.id === id);
+      const validOptions = changedQuestion?.options ?? [];
+
+      return next.map((question) => {
+        const rule = question.visibilityRule;
+        if (!rule || rule.sourceQuestionId !== id) return question;
+        if (validOptions.includes(rule.expectedValue)) return question;
+        return {
+          ...question,
+          visibilityRule: validOptions[0]
+            ? {
+                ...rule,
+                expectedValue: validOptions[0]
+              }
+            : undefined
+        };
+      });
+    });
   };
 
   const handleRemoveQuestion = (id: string) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== id));
+    setQuestions((prev) => clearVisibilityRulesForSource(prev.filter((q) => q.id !== id), id));
     setActiveQuestionId((current) => (current === id ? null : current));
   };
 
@@ -183,56 +224,62 @@ const Builder: React.FC = () => {
   React.useEffect(() => {
     let mounted = true;
     const loadDraft = async () => {
-      setLoading(true);
-      const targetId = searchParams.get("id");
-
-      if (targetId) {
-        const draft = await getQuestionnaire(targetId);
-        if (!mounted) return;
-        if (draft) {
-          setCurrentQuestionnaireId(draft.id);
-          setPaperTitle(draft.name);
-          setPaperSize(draft.paperSize);
-          setQuestions(draft.questions);
-          setHeaderConfig(normalizeQuestionnaireHeader(draft.header));
-          setActiveQuestionId(draft.questions[0]?.id ?? null);
-        } else {
-          message.warning("未找到指定的问卷，已为你创建新问卷");
-          setCurrentQuestionnaireId(null);
-          setPaperTitle("未命名问卷");
-          setPaperSize("A4");
-          setQuestions([]);
-          setHeaderConfig(normalizeQuestionnaireHeader(undefined));
-          setActiveQuestionId(null);
-        }
-      } else {
-        setCurrentQuestionnaireId(null);
-        setPaperTitle("未命名问卷");
-        setPaperSize("A4");
-        setQuestions([]);
-        setHeaderConfig(normalizeQuestionnaireHeader(undefined));
-        setActiveQuestionId(null);
+      if (mounted) {
+        setLoading(true);
       }
-      setLoading(false);
+      try {
+        const targetId = searchParams.get("id");
+
+        if (targetId) {
+          const draft = await getQuestionnaire(targetId);
+          if (!mounted) return;
+          if (draft) {
+            setCurrentQuestionnaireId(draft.id);
+            setPaperTitle(draft.name);
+            setPaperSize(draft.paperSize);
+            setQuestions(draft.questions);
+            setHeaderConfig(normalizeQuestionnaireHeader(draft.header));
+            setActiveQuestionId(draft.questions[0]?.id ?? null);
+          } else {
+            message.warning("未找到指定的问卷，已为你创建新问卷");
+            resetBuilderDraft();
+          }
+        } else {
+          resetBuilderDraft();
+        }
+      } catch (error) {
+        if (!mounted) return;
+        resetBuilderDraft();
+        message.error(getErrorMessage(error, "加载问卷失败，已创建空白问卷"));
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    loadDraft();
+    void loadDraft();
     return () => {
       mounted = false;
     };
-  }, [searchParams]);
+  }, [resetBuilderDraft, searchParams]);
 
   React.useEffect(() => {
     let mounted = true;
     const run = async () => {
-      const tpls = await loadTemplates();
-      if (!mounted) return;
-      setTemplates(tpls);
-      setActiveTemplateId((current) => {
-        if (current || !tpls[0]) return current;
-        setActiveCategoryId(tpls[0].categoryId);
-        return tpls[0].id;
-      });
+      try {
+        const tpls = await loadTemplates();
+        if (!mounted) return;
+        setTemplates(tpls);
+        setActiveTemplateId((current) => {
+          if (current || !tpls[0]) return current;
+          setActiveCategoryId(tpls[0].categoryId);
+          return tpls[0].id;
+        });
+      } catch (error) {
+        if (!mounted) return;
+        message.error(getErrorMessage(error, "加载题型模板失败，请刷新重试"));
+      }
     };
 
     void run();
@@ -382,6 +429,7 @@ const Builder: React.FC = () => {
             <div style={{ height: 1, background: "#e5e7eb", margin: "14px 0" }} />
             <div className="panel-title">题目设置</div>
             <QuestionEditor
+              questions={questions}
               activeQuestion={activeQuestion}
               onQuestionChange={handleQuestionChange}
               onRemoveQuestion={handleRemoveQuestion}

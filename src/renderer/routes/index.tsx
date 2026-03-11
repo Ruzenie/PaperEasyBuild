@@ -1,13 +1,28 @@
 import React from "react";
 import { createHashRouter, Navigate, Outlet } from "react-router-dom";
-import BuilderPage from "../pages/Builder";
-import PreviewPage from "../pages/Preview";
-import Home  from "../pages/Home";
-import ComponentMarket from "../pages/ComponentMarket";
+import { Spin } from "antd";
+
+const BuilderPage = React.lazy(() => import("../pages/Builder"));
+const PreviewPage = React.lazy(() => import("../pages/Preview"));
+const Home = React.lazy(() => import("../pages/Home"));
+const ComponentMarket = React.lazy(() => import("../pages/ComponentMarket"));
+const SubmissionsPage = React.lazy(() => import("../pages/Submissions"));
 
 const RootLayout: React.FC = () => {
   return <Outlet />;
 };
+
+const SuspensePage: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <React.Suspense
+    fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Spin size="large" />
+      </div>
+    }
+  >
+    {children}
+  </React.Suspense>
+);
 
 export const router = createHashRouter([
   {
@@ -16,19 +31,43 @@ export const router = createHashRouter([
     children: [
       {
         index: true,
-        element: <Home />
+        element: (
+          <SuspensePage>
+            <Home />
+          </SuspensePage>
+        )
       },
       {
         path: "builder",
-        element: <BuilderPage />
+        element: (
+          <SuspensePage>
+            <BuilderPage />
+          </SuspensePage>
+        )
       },
       {
         path: "preview",
-        element: <PreviewPage />
+        element: (
+          <SuspensePage>
+            <PreviewPage />
+          </SuspensePage>
+        )
       },
       {
         path: "market",
-        element: <ComponentMarket />
+        element: (
+          <SuspensePage>
+            <ComponentMarket />
+          </SuspensePage>
+        )
+      },
+      {
+        path: "submissions",
+        element: (
+          <SuspensePage>
+            <SubmissionsPage />
+          </SuspensePage>
+        )
       },
       {
         path: "*",

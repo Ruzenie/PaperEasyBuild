@@ -6,7 +6,8 @@ import {
   EyeOutlined,
   DeleteOutlined,
   PlusOutlined,
-  CompassOutlined
+  CompassOutlined,
+  FileSearchOutlined
 } from "@ant-design/icons";
 import PaperHeader from "@renderer/component/PaperHeader";
 import PaperFooter from "@renderer/component/PaperFooter";
@@ -14,6 +15,9 @@ import type { QuestionnaireRecord } from "@renderer/db";
 import { deleteQuestionnaire, listQuestionnaires } from "@renderer/db";
 
 const { Content } = Layout;
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && error.message ? error.message : fallback;
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -23,9 +27,14 @@ const Home: React.FC = () => {
 
   const fetchTemplates = React.useCallback(async () => {
     setLoading(true);
-    const records = await listQuestionnaires();
-    setTemplates(records);
-    setLoading(false);
+    try {
+      const records = await listQuestionnaires();
+      setTemplates(records);
+    } catch (error) {
+      message.error(getErrorMessage(error, "加载问卷列表失败，请稍后重试"));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -88,10 +97,14 @@ const Home: React.FC = () => {
             okText="删除"
             cancelText="取消"
             onConfirm={() => {
-              deleteQuestionnaire(record.id).then(() => {
-                message.success("已删除");
-                fetchTemplates();
-              });
+              void deleteQuestionnaire(record.id)
+                .then(() => {
+                  message.success("已删除");
+                  return fetchTemplates();
+                })
+                .catch((error) => {
+                  message.error(getErrorMessage(error, "删除问卷失败，请稍后重试"));
+                });
             }}
           >
             <Button type="primary" icon={<DeleteOutlined />} danger>
@@ -124,6 +137,9 @@ const Home: React.FC = () => {
             }}
           >
             组件市场
+          </Button>
+          <Button icon={<FileSearchOutlined />} onClick={() => navigate("/submissions")}>
+            提交记录
           </Button>
         </div>
 
