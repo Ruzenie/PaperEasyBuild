@@ -63,43 +63,58 @@ const Builder: React.FC = () => {
     setActiveQuestionId(null);
   }, []);
 
-  const handleSave = async () => {
-    const name = paperTitle.trim();
-    if (!name) {
-      message.warning("请先输入问卷名称再保存");
-      return;
-    }
-    if (name === "未命名问卷") {
-      message.warning("请为问卷重命名再保存");
-      return;
-    }
-    try {
+  const getValidatedPaperName = React.useCallback(
+    (actionText: "保存" | "预览"): string | null => {
+      const name = paperTitle.trim();
+      if (!name) {
+        message.warning(`请先输入问卷名称再${actionText}`);
+        return null;
+      }
+      if (name === "未命名问卷") {
+        message.warning("请为问卷重命名再保存");
+        return null;
+      }
+      return name;
+    },
+    [paperTitle]
+  );
+
+  const persistCurrentQuestionnaire = React.useCallback(
+    async (name: string) => {
       setSaving(true);
-      const record = await saveQuestionnaire({
-        id: currentQuestionnaireId ?? undefined,
-        name,
-        paperSize,
-        questions,
-        header: headerConfig
-      });
-      setCurrentQuestionnaireId(record.id);
+      try {
+        const record = await saveQuestionnaire({
+          id: currentQuestionnaireId ?? undefined,
+          name,
+          paperSize,
+          questions,
+          header: headerConfig
+        });
+        setCurrentQuestionnaireId(record.id);
+        return record;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [currentQuestionnaireId, headerConfig, paperSize, questions]
+  );
+
+  const handleSave = async () => {
+    const name = getValidatedPaperName("保存");
+    if (!name) return;
+
+    try {
+      await persistCurrentQuestionnaire(name);
       message.success("问卷已保存到本地");
     } catch (error) {
       message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
-    } finally {
-      setSaving(false);
     }
   };
+
   const handlePreview = () => {
-    const name = paperTitle.trim();
-    if (!name) {
-      message.warning("请先输入问卷名称再预览");
-      return;
-    }
-    if (name === "未命名问卷") {
-      message.warning("请为问卷重命名再保存");
-      return;
-    }
+    const name = getValidatedPaperName("预览");
+    if (!name) return;
+
     if (currentQuestionnaireId) {
       navigate(`/preview?id=${currentQuestionnaireId}`);
       return;
@@ -111,21 +126,11 @@ const Builder: React.FC = () => {
       cancelText: "取消",
       onOk: async () => {
         try {
-          setSaving(true);
-          const record = await saveQuestionnaire({
-            id: currentQuestionnaireId ?? undefined,
-            name,
-            paperSize,
-            questions,
-            header: headerConfig
-          });
-          setCurrentQuestionnaireId(record.id);
+          const record = await persistCurrentQuestionnaire(name);
           message.success("已保存，正在前往预览");
           navigate(`/preview?id=${record.id}`);
         } catch (error) {
           message.error(getErrorMessage(error, "保存问卷失败，请稍后重试"));
-        } finally {
-          setSaving(false);
         }
       }
     });

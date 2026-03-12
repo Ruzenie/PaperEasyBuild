@@ -260,6 +260,9 @@ export const listSubmissions = async (questionnaireId?: string): Promise<Submiss
     return db.submissions.orderBy("createdAt").reverse().toArray();
   }
 
-  const records = await db.submissions.where("questionnaireId").equals(questionnaireId).toArray();
-  return records.sort((a, b) => b.createdAt - a.createdAt);
+  return db.submissions
+    .where("[questionnaireId+createdAt]")
+    .between([questionnaireId, Dexie.minKey], [questionnaireId, Dexie.maxKey])
+    .reverse()
+    .toArray();
 };
